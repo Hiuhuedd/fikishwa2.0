@@ -10,17 +10,19 @@ const LoginScreen = () => {
     const [loading, setLoading] = useState(false);
 
     const handleSendOtp = async () => {
-        if (!phone) {
-            Alert.alert('Error', 'Please enter your phone number');
+        if (!phone || phone.length < 9) {
+            Alert.alert('Error', 'Please enter a valid phone number');
             return;
         }
 
+        const fullPhone = `+254${phone}`;
+
         try {
             setLoading(true);
-            const response = await api.post('/driver/auth/send-otp', { phone });
+            const response = await api.post('/driver/auth/send-otp', { phone: fullPhone });
 
             if (response.data.success) {
-                navigation.navigate('OTP', { phone, sessionId: response.data.data.sessionId });
+                navigation.navigate('OTP', { phone: fullPhone, sessionId: response.data.data.sessionId });
             } else {
                 Alert.alert('Error', response.data.message || 'Failed to send OTP');
             }
@@ -38,13 +40,18 @@ const LoginScreen = () => {
 
             <View style={styles.inputContainer}>
                 <Text style={styles.label}>Phone Number</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="+254..."
-                    value={phone}
-                    onChangeText={setPhone}
-                    keyboardType="phone-pad"
-                />
+                <View style={styles.phoneInputRow}>
+                    <Text style={styles.prefix}>+254</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="712345678"
+                        placeholderTextColor={Colors.textTertiary}
+                        value={phone}
+                        onChangeText={(text) => setPhone(text.replace(/[^\d]/g, ''))}
+                        keyboardType="phone-pad"
+                        maxLength={9}
+                    />
+                </View>
             </View>
 
             <TouchableOpacity
@@ -84,12 +91,28 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
         marginBottom: Spacing.xs,
     },
-    input: {
+    phoneInputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
         borderWidth: 1,
         borderColor: Colors.border,
         borderRadius: 8,
+        backgroundColor: Colors.backgroundLighter,
+        overflow: 'hidden',
+    },
+    prefix: {
+        fontSize: FontSizes.md,
+        color: Colors.textPrimary,
+        paddingHorizontal: Spacing.md,
+        fontWeight: 'bold',
+        borderRightWidth: 1,
+        borderRightColor: Colors.border,
+    },
+    input: {
+        flex: 1,
         padding: Spacing.md,
         fontSize: FontSizes.md,
+        color: Colors.white,
     },
     button: {
         backgroundColor: Colors.primary,

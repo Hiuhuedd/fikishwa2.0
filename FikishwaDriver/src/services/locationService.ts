@@ -1,18 +1,19 @@
-
 import { Platform } from 'react-native';
-import { check, request, PERMISSIONS, RESULTS, PermissionStatus } from 'react-native-permissions';
+import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { locationManager } from '@rnmapbox/maps';
+import { socketService } from './socketService';
 
 class LocationService {
     private hasLocationPermission: boolean = false;
+    private isTracking: boolean = false;
+    private subscription: any = null;
 
     constructor() {
         this.setupLocationManager();
     }
 
     private setupLocationManager() {
-        // Start listening for location updates
-        locationManager.start();
+        // Just initialize, don't start yet
     }
 
     /**
@@ -48,7 +49,45 @@ class LocationService {
     }
 
     /**
-     * Get current location using Mapbox LocationManager
+     * Start real-time tracking and reporting
+     */
+    async startTracking() {
+        if (this.isTracking) return;
+
+        const granted = await this.requestLocationPermission();
+        if (!granted) throw new Error('Location permission denied');
+
+        this.isTracking = true;
+        locationManager.start();
+
+        // Subscribe to location updates
+        this.subscription = locationManager.addListener((location) => {
+            if (location && socketService.isConnected()) {
+                socketService.emit('update-location', {
+                    lat: location.coords.latitude,
+                    lng: location.coords.longitude,
+                    heading: location.coords.heading,
+                    speed: location.coords.speed,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+    }
+
+    /**
+     * Stop real-time tracking
+     */
+    stopTracking() {
+        this.isTracking = false;
+        if (this.subscription) {
+            locationManager.removeListener(this.subscription);
+            this.subscription = null;
+        }
+        locationManager.stop();
+    }
+
+    /**
+     * Get current location once
      */
     async getCurrentLocation() {
         if (!this.hasLocationPermission) {
@@ -59,11 +98,8 @@ class LocationService {
         return await locationManager.getLastKnownLocation();
     }
 
-    /**
-     * Clean up listeners
-     */
     cleanup() {
-        locationManager.stop();
+        this.stopTracking();
     }
 }
 

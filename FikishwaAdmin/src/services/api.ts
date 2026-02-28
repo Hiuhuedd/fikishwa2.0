@@ -13,9 +13,7 @@ export const USER_KEY = '@fikishwa_admin_user';
 // API Configuration
 // Use your machine's local IP for physical device testing
 // Use 10.0.2.2 for Android emulator, or localhost for iOS simulator
-const API_BASE_URL = __DEV__
-    ? 'http://192.168.100.6:3000' // Your local machine IP
-    : 'https://your-production-url.com';
+const API_BASE_URL = 'https://fikishwa2-0-backend.onrender.com'
 
 // Create axios instance
 const api = axios.create({

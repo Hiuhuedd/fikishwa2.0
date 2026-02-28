@@ -3,7 +3,7 @@
  */
 
 import { colors } from './colors';
-import { typography } from './typography';
+import { typography, fontSizes } from './typography';
 import { spacing } from './spacing';
 import { Dimensions } from 'react-native';
 
@@ -12,6 +12,7 @@ const { width, height } = Dimensions.get('window');
 export const Colors = colors;
 export const Typography = typography;
 export const Spacing = spacing;
+export const FontSizes = fontSizes;
 
 export const Layout = {
     window: {
@@ -22,4 +23,4 @@ export const Layout = {
 };
 
 // Also export individual items for convenience
-export { colors as themeColors, typography as themeTypography, spacing as themeSpacing };
+export { colors as themeColors, typography as themeTypography, spacing as themeSpacing, fontSizes as themeFontSizes };

@@ -14,6 +14,7 @@ export const colors = {
     background: '#121212', // Main dark background
     backgroundLight: '#1E1E1E', // Card background
     backgroundLighter: '#282828', // Elevated surface
+    surface: '#282828', // Same as backgroundLighter
     backgroundOverlay: 'rgba(0, 0, 0, 0.7)',
 
     // Text
@@ -36,6 +37,10 @@ export const colors = {
     online: '#1DB954',
     offline: '#535353',
     disabled: '#3E3E3E',
+
+    // Essential colors
+    white: '#FFFFFF',
+    black: '#000000',
 };
 
 export type Colors = typeof colors;

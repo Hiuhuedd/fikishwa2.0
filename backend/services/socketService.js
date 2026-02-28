@@ -24,6 +24,17 @@ const initSocket = (server) => {
             }
         });
 
+        socket.on('update-location', async (data) => {
+            const { lat, lng, heading, speed } = data;
+            const userId = Array.from(userSockets.entries()).find(([_, id]) => id === socket.id)?.[0];
+
+            if (userId) {
+                // We could update Firestore here, but for performance 
+                // we might just broadcast to interested parties (like the passenger)
+                // console.log(`Location update from ${userId}: ${lat}, ${lng}`);
+            }
+        });
+
         socket.on('disconnect', () => {
             console.log('Socket Disconnected:', socket.id);
             // Clean up map

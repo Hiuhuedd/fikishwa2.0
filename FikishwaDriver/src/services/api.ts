@@ -1,11 +1,12 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Replace with your actual backend URL (localhost for emulator: 10.0.2.2 on Android)
-const API_URL = 'http://10.0.2.2:3000/api';
+// Live backend URL on Render
+const API_URL = 'https://fikishwa2-0-backend.onrender.com/api';
 
 const api = axios.create({
     baseURL: API_URL,
+    timeout: 30000,
     headers: {
         'Content-Type': 'application/json',
     },

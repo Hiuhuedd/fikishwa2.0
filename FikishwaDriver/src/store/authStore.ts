@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthState, Driver } from '../types';
-import { jwtDecode } from 'jwt-decode';
+import { socketService } from '../services/socketService';
 
 export const useAuthStore = create<AuthState>((set) => ({
     token: null,
@@ -11,14 +11,21 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     login: async (token: string, user: Driver) => {
         await AsyncStorage.setItem('driverToken', token);
-        // Also save user data for offline/quick load
         await AsyncStorage.setItem('driverUser', JSON.stringify(user));
+
+        // Connect socket on login
+        socketService.connect(user.uid);
+
         set({ token, user, isAuthenticated: true });
     },
 
     logout: async () => {
         await AsyncStorage.removeItem('driverToken');
         await AsyncStorage.removeItem('driverUser');
+
+        // Disconnect socket on logout
+        socketService.disconnect();
+
         set({ token: null, user: null, isAuthenticated: false });
     },
 
@@ -38,8 +45,11 @@ export const useAuthStore = create<AuthState>((set) => ({
             const userStr = await AsyncStorage.getItem('driverUser');
 
             if (token && userStr) {
-                // TODO: Verify token expiration
                 const user = JSON.parse(userStr);
+
+                // Re-connect socket if token exists
+                socketService.connect(user.uid);
+
                 set({ token, user, isAuthenticated: true, isLoading: false });
             } else {
                 set({ token: null, user: null, isAuthenticated: false, isLoading: false });

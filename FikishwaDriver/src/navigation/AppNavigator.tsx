@@ -2,25 +2,26 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/authStore';
+import LandingScreen from '../screens/auth/LandingScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import OTPScreen from '../screens/auth/OTPScreen';
 import RegistrationScreen from '../screens/auth/RegistrationScreen';
-import MapTestScreen from '../screens/MapTestScreen';
-// import HomeScreen from '../screens/main/HomeScreen'; // To be created
+import ReviewScreen from '../screens/auth/ReviewScreen';
+import HomeScreen from '../screens/main/HomeScreen';
 
 const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
 
 const AuthNavigator = () => (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+        <AuthStack.Screen name="Landing" component={LandingScreen} />
         <AuthStack.Screen name="Login" component={LoginScreen} />
         <AuthStack.Screen name="OTP" component={OTPScreen} />
-        <AuthStack.Screen name="Registration" component={RegistrationScreen} />
     </AuthStack.Navigator>
 );
 
 const AppNavigator = () => {
-    const { isAuthenticated, checkAuth, isLoading } = useAuthStore();
+    const { isAuthenticated, user, checkAuth, isLoading } = useAuthStore();
 
     useEffect(() => {
         checkAuth();
@@ -34,19 +35,27 @@ const AppNavigator = () => {
     return (
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-                {/* TEMPORARY: Test Map Screen */}
-                <Stack.Screen name="MapTest" component={MapTestScreen} />
-
-                {isAuthenticated ? (
-                    // Placeholder for Main App
-                    <Stack.Screen name="Main" component={() => <></>} />
-                ) : (
+                {!isAuthenticated ? (
                     <Stack.Screen name="Auth" component={AuthNavigator} />
+                ) : (
+                    <>
+                        {/* Logic based on registration status */}
+                        {(!user || user.registrationStatus === 'pending' || user.registrationStatus === 'submitted') && (
+                            <Stack.Screen name="Registration" component={RegistrationScreen} />
+                        )}
+
+                        {user?.registrationStatus === 'pending_review' && (
+                            <Stack.Screen name="Review" component={ReviewScreen} />
+                        )}
+
+                        {(user?.registrationStatus === 'approved' || user?.registrationStatus === 'rejected') && (
+                            <Stack.Screen name="Home" component={HomeScreen} />
+                        )}
+                    </>
                 )}
             </Stack.Navigator>
         </NavigationContainer>
     );
 };
-
 
 export default AppNavigator;
