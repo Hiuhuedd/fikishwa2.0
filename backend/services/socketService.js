@@ -8,7 +8,8 @@ const initSocket = (server) => {
         cors: {
             origin: "*",
             methods: ["GET", "POST"]
-        }
+        },
+        transports: ['websocket', 'polling'] // Explicitly support both
     });
 
     io.on('connection', (socket) => {

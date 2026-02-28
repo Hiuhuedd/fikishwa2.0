@@ -1,7 +1,8 @@
 import { io, Socket } from 'socket.io-client';
 import { API_BASE_URL } from '../config/api';
 
-const SOCKET_URL = API_BASE_URL.replace('/api', '');
+// Construct the root URL from the API URL (e.g., https://.../api -> https://...)
+const SOCKET_URL = 'https://fikishwa2-0-backend.onrender.com';
 
 class SocketService {
     private socket: Socket | null = null;
