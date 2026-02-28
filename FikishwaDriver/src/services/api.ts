@@ -1,8 +1,9 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Live backend URL on Render
-const API_URL = 'https://fikishwa2-0-backend.onrender.com/api';
+import { API_BASE_URL } from '../config/api';
+
+const API_URL = `${API_BASE_URL}/api`;
 
 const api = axios.create({
     baseURL: API_URL,

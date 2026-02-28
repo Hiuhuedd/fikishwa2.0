@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, SafeAreaView, StatusBar, Alert } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, StatusBar, Alert } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import { locationService } from '../../services/locationService';
 import api from '../../services/api';
 import { MAPBOX_STYLE_URL } from '../../config';
 import { Colors, Spacing, FontSizes } from '../../theme';
 import { useAuthStore } from '../../store/authStore';
+import RideRequestModal from '../../components/RideRequestModal';
+import ReactNativeHapticFeedback from "react-native-haptic-feedback";
+import { socketService } from '../../services/socketService';
+
+import { soundService } from '../../services/soundService';
+
+const hapticOptions = {
+    enableVibrateFallback: true,
+    ignoreAndroidSystemSettings: false,
+};
 
 const HomeScreen = () => {
     const { user, logout } = useAuthStore();
@@ -13,16 +23,74 @@ const HomeScreen = () => {
     const [loading, setLoading] = useState(false);
     const [locationPermission, setLocationPermission] = useState(false);
 
+    // Ride Request State
+    const [showRideModal, setShowRideModal] = useState(false);
+    const [incomingRide, setIncomingRide] = useState<any>(null);
+
     useEffect(() => {
         requestPermission();
+
+        // Load sounds - Uncomment once alert.mp3 is added to src/assets/sounds/
+        // soundService.loadSound('alert', require('../../assets/sounds/alert.mp3'));
+
+        // Listen for new ride requests
+        socketService.on('new-ride-request', (data) => {
+            console.log('New ride request received:', data);
+            setIncomingRide({
+                rideId: data.rideId,
+                pickup: data.pickup,
+                dropoff: data.dropoff,
+                fare: data.fare,
+                distance: '2.4 km', // Backend should ideally provide this
+                estimateTime: '8 min', // Backend should ideally provide this
+                customerName: data.customerName || 'Customer'
+            });
+            setShowRideModal(true);
+
+            ReactNativeHapticFeedback.trigger("notificationSuccess", hapticOptions);
+            soundService.play('alert');
+        });
+
         return () => {
             locationService.stopTracking();
+            socketService.off('new-ride-request');
+            soundService.releaseAll();
         };
     }, []);
 
     const requestPermission = async () => {
         const granted = await locationService.requestLocationPermission();
         setLocationPermission(granted);
+    };
+
+    const handleAcceptRide = async () => {
+        if (!incomingRide) return;
+
+        try {
+            setLoading(true);
+            const response = await api.post('/driver/ride/accept', {
+                rideId: incomingRide.rideId
+            });
+
+            if (response.data.success) {
+                setShowRideModal(false);
+                setIncomingRide(null);
+                ReactNativeHapticFeedback.trigger("impactHeavy", hapticOptions);
+                Alert.alert('Success', 'Ride accepted! Navigating to pickup...');
+                // TODO: Navigate to active ride screen
+            }
+        } catch (error: any) {
+            console.error('Accept ride error:', error);
+            Alert.alert('Failed', error.response?.data?.message || 'Could not accept ride');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeclineRide = () => {
+        setShowRideModal(false);
+        setIncomingRide(null);
+        ReactNativeHapticFeedback.trigger("impactLight", hapticOptions);
     };
 
     const toggleOnline = async () => {
@@ -44,12 +112,14 @@ const HomeScreen = () => {
                 if (response.data.success) {
                     await locationService.startTracking();
                     setIsOnline(true);
+                    ReactNativeHapticFeedback.trigger("impactMedium", hapticOptions);
                 }
             } else {
                 const response = await api.post('/driver/ride/status/offline');
                 if (response.data.success) {
                     locationService.stopTracking();
                     setIsOnline(false);
+                    ReactNativeHapticFeedback.trigger("impactMedium", hapticOptions);
                 }
             }
         } catch (error: any) {
@@ -75,7 +145,29 @@ const HomeScreen = () => {
 
             <View style={styles.topOverlay}>
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.profileCircle} onPress={logout}>
+                    <TouchableOpacity
+                        style={styles.profileCircle}
+                        onPress={logout}
+                        onLongPress={() => {
+                            Alert.alert(
+                                "Debug Mode",
+                                "Simulate a new ride request?",
+                                [
+                                    { text: "Cancel", style: "cancel" },
+                                    {
+                                        text: "Simulate",
+                                        onPress: async () => {
+                                            try {
+                                                await api.post('/test/mock-ride', { driverId: user?.uid });
+                                            } catch (err) {
+                                                console.error('Failed to trigger mock ride:', err);
+                                            }
+                                        }
+                                    }
+                                ]
+                            );
+                        }}
+                    >
                         <Text style={styles.profileInitial}>{user?.name?.charAt(0) || 'D'}</Text>
                     </TouchableOpacity>
                     <View style={styles.statusBadge}>
@@ -92,7 +184,7 @@ const HomeScreen = () => {
                         onPress={toggleOnline}
                         disabled={loading}
                     >
-                        <Text style={styles.onlineButtonText}>{loading ? 'BOOTING...' : 'GO ONLINE'}</Text>
+                        <Text style={styles.onlineButtonText}>GO ONLINE</Text>
                     </TouchableOpacity>
                 ) : (
                     <TouchableOpacity
@@ -100,10 +192,17 @@ const HomeScreen = () => {
                         onPress={toggleOnline}
                         disabled={loading}
                     >
-                        <Text style={styles.onlineButtonText}>{loading ? 'STOPPING...' : 'GO OFFLINE'}</Text>
+                        <Text style={styles.onlineButtonText}>GO OFFLINE</Text>
                     </TouchableOpacity>
                 )}
             </View>
+
+            <RideRequestModal
+                visible={showRideModal}
+                rideData={incomingRide}
+                onAccept={handleAcceptRide}
+                onDecline={handleDeclineRide}
+            />
 
             {!locationPermission && (
                 <View style={styles.permissionOverlay}>

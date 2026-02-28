@@ -40,14 +40,12 @@ app.use('/api/driver/payout', require('./routes/driverPayoutRoutes'));
 app.use('/api/admin/customers', require('./routes/adminCustomerRoutes'));
 app.use('/api/admin/promotions', require('./routes/adminPromotionRoutes'));
 app.use('/api/customer/promo', require('./routes/customerPromoRoutes'));
-app.use('/api/user', require('./routes/referralRoutes'));
-app.use('/api/admin/vehicle-categories', require('./routes/adminVehicleCategoryRoutes'));
-app.use('/api/admin/rides', require('./routes/adminRideRoutes'));
-
-// Health Check
 app.get('/', (req, res) => {
     res.send('Fikishwa Backend API (JWT Mode) is running with Socket.io');
 });
+
+// Test/Debug Routes
+app.use('/api/test', require('./routes/testRoutes'));
 
 // Start Server
 server.listen(PORT, () => {
