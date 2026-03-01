@@ -36,25 +36,30 @@ const RideRequestModal: React.FC<RideRequestModalProps> = ({
     onDecline,
 }) => {
     const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+    const lottieRef = useRef<LottieView>(null);
 
     useEffect(() => {
         if (visible) {
             Animated.spring(slideAnim, {
                 toValue: 0,
                 useNativeDriver: true,
-                tension: 50,
-                friction: 8,
+                speed: 12,
+                bounciness: 4,
             }).start();
         } else {
             Animated.timing(slideAnim, {
                 toValue: SCREEN_HEIGHT,
-                duration: 300,
+                duration: 250,
                 useNativeDriver: true,
             }).start();
         }
-    }, [visible]);
 
-    if (!rideData) return null;
+        return () => {
+            slideAnim.stopAnimation();
+        };
+    }, [visible, slideAnim]);
+
+    if (!rideData && !visible) return null;
 
     return (
         <Modal
@@ -74,6 +79,7 @@ const RideRequestModal: React.FC<RideRequestModalProps> = ({
 
                     <View style={styles.animationContainer}>
                         <LottieView
+                            ref={lottieRef}
                             source={require('../assets/animations/ride_request.json')}
                             autoPlay
                             loop
@@ -90,10 +96,10 @@ const RideRequestModal: React.FC<RideRequestModalProps> = ({
 
                     <View style={styles.customerInfo}>
                         <View style={styles.avatarPlaceholder}>
-                            <Text style={styles.avatarText}>{rideData.customerName.charAt(0)}</Text>
+                            <Text style={styles.avatarText}>{rideData?.customerName?.charAt(0) || '?'}</Text>
                         </View>
                         <View>
-                            <Text style={styles.customerName}>{rideData.customerName}</Text>
+                            <Text style={styles.customerName}>{rideData?.customerName || 'Customer'}</Text>
                             <Text style={styles.ratingText}>⭐ 4.9 (Recent)</Text>
                         </View>
                     </View>
@@ -108,12 +114,12 @@ const RideRequestModal: React.FC<RideRequestModalProps> = ({
                             <View style={styles.locationTextContainer}>
                                 <Text style={styles.locationLabel}>PICKUP</Text>
                                 <Text style={styles.locationValue} numberOfLines={1}>
-                                    {rideData.pickup.address}
+                                    {rideData?.pickup?.address || 'Loading...'}
                                 </Text>
                                 <View style={styles.spacer} />
                                 <Text style={styles.locationLabel}>DROPOFF</Text>
                                 <Text style={styles.locationValue} numberOfLines={1}>
-                                    {rideData.dropoff.address}
+                                    {rideData?.dropoff?.address || 'Loading...'}
                                 </Text>
                             </View>
                         </View>
@@ -132,7 +138,7 @@ const RideRequestModal: React.FC<RideRequestModalProps> = ({
                             <View style={styles.metricItem}>
                                 <DollarSign size={20} color={Colors.primary} />
                                 <Text style={[styles.metricValue, { color: Colors.primary }]}>
-                                    KES {rideData.fare}
+                                    KES {rideData?.fare || '0'}
                                 </Text>
                                 <Text style={styles.metricLabel}>Est. Fare</Text>
                             </View>

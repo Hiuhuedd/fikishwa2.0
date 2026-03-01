@@ -1,12 +1,10 @@
-import { Platform } from 'react-native';
-import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
-import { locationManager } from '@rnmapbox/maps';
+import Mapbox, { locationManager } from '@rnmapbox/maps';
 import { socketService } from './socketService';
 
 class LocationService {
     private hasLocationPermission: boolean = false;
     private isTracking: boolean = false;
-    private subscription: any = null;
+    private locationListener: ((location: any) => void) | null = null;
 
     constructor() {
         this.setupLocationManager();
@@ -58,10 +56,12 @@ class LocationService {
         if (!granted) throw new Error('Location permission denied');
 
         this.isTracking = true;
-        locationManager.start();
 
-        // Subscribe to location updates
-        this.subscription = locationManager.addListener((location) => {
+        // Use static locationManager from Mapbox
+        Mapbox.locationManager.start();
+
+        // Stable function reference to avoid NativeEventEmitter issues
+        this.locationListener = (location: any) => {
             if (location && socketService.isConnected()) {
                 socketService.emit('update-location', {
                     lat: location.coords.latitude,
@@ -71,7 +71,10 @@ class LocationService {
                     timestamp: new Date().toISOString()
                 });
             }
-        });
+        };
+
+        // Subscribe using the stable reference
+        Mapbox.locationManager.addListener(this.locationListener);
     }
 
     /**
@@ -79,11 +82,11 @@ class LocationService {
      */
     stopTracking() {
         this.isTracking = false;
-        if (this.subscription) {
-            locationManager.removeListener(this.subscription);
-            this.subscription = null;
+        if (this.locationListener) {
+            Mapbox.locationManager.removeListener(this.locationListener);
+            this.locationListener = null;
         }
-        locationManager.stop();
+        Mapbox.locationManager.stop();
     }
 
     /**
@@ -95,12 +98,16 @@ class LocationService {
             if (!granted) throw new Error('Location permission denied');
         }
 
-        return await locationManager.getLastKnownLocation();
+        return await Mapbox.locationManager.getLastKnownLocation();
     }
 
     cleanup() {
         this.stopTracking();
     }
 }
+
+// Ensure native permissions are still available (Imported from react-native-permissions)
+import { Platform } from 'react-native';
+import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 
 export const locationService = new LocationService();

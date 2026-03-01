@@ -140,7 +140,7 @@ const HomeScreen = () => {
                     followUserLocation
                     followUserMode={Mapbox.UserTrackingMode.Follow}
                 />
-                <Mapbox.UserLocation animated={true} />
+                <Mapbox.UserLocation animated={false} />
             </Mapbox.MapView>
 
             <View style={styles.topOverlay}>
