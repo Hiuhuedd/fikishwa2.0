@@ -13,7 +13,7 @@ class SocketService {
         this.userId = userId;
         this.socket = io(SOCKET_URL, {
             query: { userId },
-            transports: ['websocket'],
+            transports: ['polling', 'websocket'], // Allow upgrade from polling
             reconnectionAttempts: 5,
             reconnectionDelay: 2000,
         });
@@ -63,6 +63,10 @@ class SocketService {
             this.socket.disconnect();
             this.socket = null;
         }
+    }
+
+    getSocketURL() {
+        return SOCKET_URL;
     }
 
     isConnected() {

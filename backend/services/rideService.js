@@ -116,10 +116,15 @@ const acceptRide = async (rideId, driverId, driverDetails) => {
         const requestRef = doc(db, 'rideRequests', rideId);
 
         const result = await runTransaction(db, async (transaction) => {
+            console.log('Accepting ride transaction for ID:', rideId);
             const rideDoc = await transaction.get(rideRef);
-            if (!rideDoc.exists()) throw new Error('Ride does not exist');
+            if (!rideDoc.exists()) {
+                console.error('Ride document NOT FOUND in Firestore for ID:', rideId);
+                throw new Error('Ride does not exist');
+            }
 
             const rideData = rideDoc.data();
+            console.log('Ride found. Current status:', rideData.status);
             if (rideData.status !== 'searching') {
                 throw new Error('Ride is already ' + rideData.status);
             }

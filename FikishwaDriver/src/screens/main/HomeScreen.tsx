@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store/authStore';
 import RideRequestModal from '../../components/RideRequestModal';
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
 import { socketService } from '../../services/socketService';
+import { API_BASE_URL } from '../../config/api';
 
 import { soundService } from '../../services/soundService';
 
@@ -17,7 +18,10 @@ const hapticOptions = {
     ignoreAndroidSystemSettings: false,
 };
 
+import { useNavigation } from '@react-navigation/native';
+
 const HomeScreen = () => {
+    const navigation = useNavigation<any>();
     const { user, logout } = useAuthStore();
     const [isOnline, setIsOnline] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -76,8 +80,11 @@ const HomeScreen = () => {
                 setShowRideModal(false);
                 setIncomingRide(null);
                 ReactNativeHapticFeedback.trigger("impactHeavy", hapticOptions);
-                Alert.alert('Success', 'Ride accepted! Navigating to pickup...');
-                // TODO: Navigate to active ride screen
+
+                // Navigate to active ride screen
+                navigation.navigate('ActiveRide', {
+                    rideData: incomingRide
+                });
             }
         } catch (error: any) {
             console.error('Accept ride error:', error);

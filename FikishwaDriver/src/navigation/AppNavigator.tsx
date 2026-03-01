@@ -9,6 +9,8 @@ import RegistrationScreen from '../screens/auth/RegistrationScreen';
 import ReviewScreen from '../screens/auth/ReviewScreen';
 import HomeScreen from '../screens/main/HomeScreen';
 
+import ActiveRideScreen from '../screens/main/ActiveRideScreen';
+
 const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
 
@@ -49,7 +51,10 @@ const AppNavigator = () => {
                         )}
 
                         {(user?.registrationStatus === 'approved' || user?.registrationStatus === 'rejected') && (
-                            <Stack.Screen name="Home" component={HomeScreen} />
+                            <>
+                                <Stack.Screen name="Home" component={HomeScreen} />
+                                <Stack.Screen name="ActiveRide" component={ActiveRideScreen} />
+                            </>
                         )}
                     </>
                 )}
