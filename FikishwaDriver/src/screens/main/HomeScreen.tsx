@@ -18,7 +18,8 @@ const hapticOptions = {
     ignoreAndroidSystemSettings: false,
 };
 
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { TrendingUp } from 'lucide-react-native';
 
 const HomeScreen = () => {
     const navigation = useNavigation<any>();
@@ -30,6 +31,24 @@ const HomeScreen = () => {
     // Ride Request State
     const [showRideModal, setShowRideModal] = useState(false);
     const [incomingRide, setIncomingRide] = useState<any>(null);
+    const [todayEarnings, setTodayEarnings] = useState(0);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchSummary();
+        }, [])
+    );
+
+    const fetchSummary = async () => {
+        try {
+            const response = await api.get('/driver/payout/daily');
+            if (response.data.success) {
+                setTodayEarnings(response.data.summary.totalDriverShare);
+            }
+        } catch (error) {
+            console.error('Fetch summary error:', error);
+        }
+    };
 
     useEffect(() => {
         requestPermission();
@@ -143,7 +162,7 @@ const HomeScreen = () => {
 
             <Mapbox.MapView style={styles.map} styleURL={MAPBOX_STYLE_URL} logoEnabled={false}>
                 <Mapbox.Camera
-                    zoomLevel={14}
+                    zoomLevel={15}
                     followUserLocation
                     followUserMode={Mapbox.UserTrackingMode.Follow}
                 />
@@ -182,6 +201,20 @@ const HomeScreen = () => {
                         <Text style={styles.statusText}>{loading ? 'Updating...' : (isOnline ? 'Online' : 'Offline')}</Text>
                     </View>
                 </View>
+
+                {/* Earnings Summary Card */}
+                <TouchableOpacity
+                    style={styles.earningsCard}
+                    onPress={() => navigation.navigate('Earnings')}
+                >
+                    <View style={styles.earningsIconContainer}>
+                        <TrendingUp size={20} color={Colors.white} />
+                    </View>
+                    <View>
+                        <Text style={styles.earningsLabel}>TODAY'S EARNINGS</Text>
+                        <Text style={styles.earningsValue}>KES {todayEarnings}</Text>
+                    </View>
+                </TouchableOpacity>
             </View>
 
             <View style={styles.bottomOverlay}>
@@ -275,6 +308,35 @@ const styles = StyleSheet.create({
         color: Colors.white,
         fontSize: 12,
         fontWeight: '600',
+    },
+    earningsCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.backgroundOverlay,
+        borderRadius: 20,
+        padding: Spacing.sm,
+        marginTop: Spacing.md,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    earningsIconContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: Colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    earningsLabel: {
+        color: Colors.textSecondary,
+        fontSize: 10,
+        fontWeight: '700',
+    },
+    earningsValue: {
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     bottomOverlay: {
         position: 'absolute',

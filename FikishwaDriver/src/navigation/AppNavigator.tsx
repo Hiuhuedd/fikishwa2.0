@@ -10,6 +10,7 @@ import ReviewScreen from '../screens/auth/ReviewScreen';
 import HomeScreen from '../screens/main/HomeScreen';
 
 import ActiveRideScreen from '../screens/main/ActiveRideScreen';
+import EarningsScreen from '../screens/main/EarningsScreen';
 
 const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
@@ -54,6 +55,7 @@ const AppNavigator = () => {
                             <>
                                 <Stack.Screen name="Home" component={HomeScreen} />
                                 <Stack.Screen name="ActiveRide" component={ActiveRideScreen} />
+                                <Stack.Screen name="Earnings" component={EarningsScreen} />
                             </>
                         )}
                     </>

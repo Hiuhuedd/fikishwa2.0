@@ -12,6 +12,12 @@ const FALLBACK_RATES = {
         perMin: 5,
         perStop: 100
     },
+    standard: {
+        baseFare: 150,
+        perKm: 40,
+        perMin: 5,
+        perStop: 100
+    },
     parcel: {
         baseFare: 200,
         perKm: 50,
@@ -61,11 +67,12 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
 
         // 2. Fallback to Legacy Config / Hardcoded defaults if no category or category not found
         if (!rates.baseFare) {
+            const fallbackRates = FALLBACK_RATES[rideType] || FALLBACK_RATES.inperson;
             rates = {
-                baseFare: config.baseFare?.[rideType] || FALLBACK_RATES[rideType].baseFare,
-                perKm: config.perKmRate?.[rideType] || FALLBACK_RATES[rideType].perKm,
-                perMin: config.perMinRate?.[rideType] || FALLBACK_RATES[rideType].perMin,
-                perStop: config.perStopFee || FALLBACK_RATES[rideType].perStop,
+                baseFare: config.baseFare?.[rideType] || fallbackRates.baseFare,
+                perKm: config.perKmRate?.[rideType] || fallbackRates.perKm,
+                perMin: config.perMinRate?.[rideType] || fallbackRates.perMin,
+                perStop: config.perStopFee || fallbackRates.perStop,
                 minFare: 0
             };
         }
@@ -151,7 +158,7 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
         console.error('❌ Error calculating estimate, using fallback rates:', error);
 
         // Ultrafallback
-        const rates = FALLBACK_RATES[rideType];
+        const rates = FALLBACK_RATES[rideType] || FALLBACK_RATES.inperson;
         const distanceKm = distanceMeters / 1000;
         const durationMin = durationSeconds / 60;
         const total = rates.baseFare + (distanceKm * rates.perKm) + (durationMin * rates.perMin) + (stopCount * rates.perStop);
