@@ -25,6 +25,7 @@ interface RideRequestModalProps {
         estimateTime: string;
         customerName: string;
     } | null;
+    loading?: boolean;
     onAccept: () => void;
     onDecline: () => void;
 }
@@ -32,6 +33,7 @@ interface RideRequestModalProps {
 const RideRequestModal: React.FC<RideRequestModalProps> = ({
     visible,
     rideData,
+    loading = false,
     onAccept,
     onDecline,
 }) => {
@@ -57,7 +59,7 @@ const RideRequestModal: React.FC<RideRequestModalProps> = ({
         return () => {
             slideAnim.stopAnimation();
         };
-    }, [visible, slideAnim]);
+    }, [visible, slideAnim, loading]);
 
     if (!rideData && !visible) return null;
 
@@ -66,7 +68,7 @@ const RideRequestModal: React.FC<RideRequestModalProps> = ({
             transparent
             visible={visible}
             animationType="none"
-            onRequestClose={onDecline}
+            onRequestClose={!loading ? onDecline : undefined}
         >
             <View style={styles.overlay}>
                 <Animated.View
@@ -127,12 +129,12 @@ const RideRequestModal: React.FC<RideRequestModalProps> = ({
                         <View style={styles.metricsRow}>
                             <View style={styles.metricItem}>
                                 <Navigation size={20} color={Colors.textSecondary} />
-                                <Text style={styles.metricValue}>{rideData.distance || '2.4 km'}</Text>
+                                <Text style={styles.metricValue}>{rideData?.distance || '2.4 km'}</Text>
                                 <Text style={styles.metricLabel}>Distance</Text>
                             </View>
                             <View style={styles.metricItem}>
                                 <Clock size={20} color={Colors.textSecondary} />
-                                <Text style={styles.metricValue}>{rideData.estimateTime || '8 min'}</Text>
+                                <Text style={styles.metricValue}>{rideData?.estimateTime || '8 min'}</Text>
                                 <Text style={styles.metricLabel}>Arrival</Text>
                             </View>
                             <View style={styles.metricItem}>
@@ -147,16 +149,23 @@ const RideRequestModal: React.FC<RideRequestModalProps> = ({
 
                     <View style={styles.actionButtons}>
                         <TouchableOpacity
-                            style={styles.declineButton}
+                            style={[styles.declineButton, loading && { opacity: 0.5 }]}
                             onPress={onDecline}
+                            disabled={loading}
                         >
                             <Text style={styles.declineButtonText}>Decline</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={styles.acceptButton}
+                            style={[
+                                styles.acceptButton,
+                                loading && { backgroundColor: Colors.textTertiary, shadowColor: 'transparent' }
+                            ]}
                             onPress={onAccept}
+                            disabled={loading}
                         >
-                            <Text style={styles.acceptButtonText}>Accept</Text>
+                            <Text style={styles.acceptButtonText}>
+                                {loading ? 'Accepting...' : 'Accept'}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 </Animated.View>

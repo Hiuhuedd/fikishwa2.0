@@ -12,8 +12,14 @@ import HomeScreen from '../screens/main/HomeScreen';
 import ActiveRideScreen from '../screens/main/ActiveRideScreen';
 import EarningsScreen from '../screens/main/EarningsScreen';
 
+import { createDrawerNavigator } from '@react-navigation/drawer';
+import CustomDrawerContent from './CustomDrawerContent';
+import ProfileScreen from '../screens/main/ProfileScreen';
+import SettingsScreen from '../screens/main/SettingsScreen';
+
 const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
+const Drawer = createDrawerNavigator();
 
 const AuthNavigator = () => (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
@@ -21,6 +27,25 @@ const AuthNavigator = () => (
         <AuthStack.Screen name="Login" component={LoginScreen} />
         <AuthStack.Screen name="OTP" component={OTPScreen} />
     </AuthStack.Navigator>
+);
+
+const MainDrawerNavigator = () => (
+    <Drawer.Navigator
+        drawerContent={(props) => <CustomDrawerContent {...props} />}
+        screenOptions={{
+            headerShown: false,
+            drawerType: 'slide',
+            drawerStyle: {
+                width: '80%',
+                backgroundColor: 'transparent',
+            },
+        }}
+    >
+        <Drawer.Screen name="Home" component={HomeScreen} />
+        <Drawer.Screen name="Earnings" component={EarningsScreen} />
+        <Drawer.Screen name="Profile" component={ProfileScreen} />
+        <Drawer.Screen name="Settings" component={SettingsScreen} />
+    </Drawer.Navigator>
 );
 
 const AppNavigator = () => {
@@ -53,9 +78,8 @@ const AppNavigator = () => {
 
                         {(user?.registrationStatus === 'approved' || user?.registrationStatus === 'rejected') && (
                             <>
-                                <Stack.Screen name="Home" component={HomeScreen} />
+                                <Stack.Screen name="Main" component={MainDrawerNavigator} />
                                 <Stack.Screen name="ActiveRide" component={ActiveRideScreen} />
-                                <Stack.Screen name="Earnings" component={EarningsScreen} />
                             </>
                         )}
                     </>

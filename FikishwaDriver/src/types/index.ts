@@ -7,6 +7,9 @@ export interface Driver {
     status: 'active' | 'inactive' | 'suspended' | 'pending';
     profilePhotoUrl?: string;
     vehicleType?: string;
+    carMake?: string;
+    carModel?: string;
+    plateNumber?: string;
     isOnline?: boolean;
 }
 

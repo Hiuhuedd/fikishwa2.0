@@ -37,10 +37,10 @@ const FALLBACK_RATES = {
  * @param {string|null} vehicleCategory
  * @param {object|null} parcelDetails
  */
-const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rideType = 'inperson', promoCode = null, userId = null, vehicleCategory = null, parcelDetails = null) => {
+const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rideType = 'inperson', promoCode = null, userId = null, vehicleCategory = null, parcelDetails = null, cachedConfig = null, cachedCategory = null) => {
     try {
         // Fetch dynamic config
-        const config = await configService.getConfig();
+        const config = cachedConfig || await configService.getConfig();
         const surgeMultiplier = config.surgeMultiplier || 1.0;
 
         let rates = {};
@@ -48,17 +48,28 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
         // 1. Try to get rates from Vehicle Category if specified
         if (vehicleCategory) {
             try {
-                const vehicleCategoryService = require('./vehicleCategoryService');
-                const category = await vehicleCategoryService.getCategoryDetails(vehicleCategory);
-                if (category) {
+                if (cachedCategory) {
                     rates = {
-                        baseFare: category.baseFare,
-                        perKm: category.perKmRate,
-                        perMin: category.perMinRate,
-                        perStop: category.perStopFee,
-                        minFare: category.minFare || category.baseFare,
-                        items: category // Keep full category for limits
+                        baseFare: cachedCategory.baseFare,
+                        perKm: cachedCategory.perKmRate,
+                        perMin: cachedCategory.perMinRate,
+                        perStop: cachedCategory.perStopFee,
+                        minFare: cachedCategory.minFare || cachedCategory.baseFare,
+                        items: cachedCategory
                     };
+                } else {
+                    const vehicleCategoryService = require('./vehicleCategoryService');
+                    const category = await vehicleCategoryService.getCategoryDetails(vehicleCategory);
+                    if (category) {
+                        rates = {
+                            baseFare: category.baseFare,
+                            perKm: category.perKmRate,
+                            perMin: category.perMinRate,
+                            perStop: category.perStopFee,
+                            minFare: category.minFare || category.baseFare,
+                            items: category // Keep full category for limits
+                        };
+                    }
                 }
             } catch (err) {
                 console.warn(`Failed to fetch category ${vehicleCategory}, falling back to legacy config.`);
@@ -174,16 +185,16 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
 /**
  * Calculate final fare based on actual trip data
  */
-const calculateFinalFare = async (actualDistanceMeters, actualDurationSeconds, stopCount, rideType = 'inperson', promoCode = null, userId = null, vehicleCategory = null, parcelDetails = null) => {
-    return await calculateEstimate(actualDistanceMeters, actualDurationSeconds, stopCount, rideType, promoCode, userId, vehicleCategory, parcelDetails);
+const calculateFinalFare = async (actualDistanceMeters, actualDurationSeconds, stopCount, rideType = 'inperson', promoCode = null, userId = null, vehicleCategory = null, parcelDetails = null, cachedConfig = null, cachedCategory = null) => {
+    return await calculateEstimate(actualDistanceMeters, actualDurationSeconds, stopCount, rideType, promoCode, userId, vehicleCategory, parcelDetails, cachedConfig, cachedCategory);
 };
 
 /**
  * Calculate commission from final fare
  */
-const calculateCommission = async (finalFare) => {
+const calculateCommission = async (finalFare, cachedConfig = null) => {
     try {
-        const config = await configService.getConfig();
+        const config = cachedConfig || await configService.getConfig();
         const commissionRate = config.commissionRate || 0.03;
         const taxRate = config.taxRate || 0.16;
 

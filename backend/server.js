@@ -1,3 +1,4 @@
+console.log('🏁 Backend server.js starting up...');
 const express = require('express');
 const http = require('http'); // Added for Socket.io
 const cors = require('cors');
@@ -27,6 +28,12 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Request Logger
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
 // Routes
 app.use('/api/customer/auth', customerAuthRoutes);
 app.use('/api/driver/auth', driverAuthRoutes);
@@ -46,6 +53,17 @@ app.get('/', (req, res) => {
 
 // Test/Debug Routes
 app.use('/api/test', require('./routes/testRoutes'));
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error('🔴 GLOBAL ERROR CAUGHT:', err);
+    res.status(500).json({
+        success: false,
+        message: 'Internal Server Error (Global Handler)',
+        error: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+});
 
 // Start Server
 server.listen(PORT, () => {

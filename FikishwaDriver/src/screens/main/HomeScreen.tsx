@@ -41,7 +41,8 @@ const HomeScreen = () => {
 
     const fetchSummary = async () => {
         try {
-            const response = await api.get('/driver/payout/daily');
+            console.log('Fetching summary from:', `${api.defaults.baseURL}/driver/payout/daily-history`);
+            const response = await api.get('/driver/payout/daily-history');
             if (response.data.success) {
                 setTodayEarnings(response.data.summary.totalDriverShare);
             }
@@ -96,6 +97,7 @@ const HomeScreen = () => {
             });
 
             if (response.data.success) {
+                setLoading(false); // Clear loading first to allow modal to dismiss
                 setShowRideModal(false);
                 setIncomingRide(null);
                 ReactNativeHapticFeedback.trigger("impactHeavy", hapticOptions);
@@ -107,9 +109,8 @@ const HomeScreen = () => {
             }
         } catch (error: any) {
             console.error('Accept ride error:', error);
+            setLoading(false); // Ensure loading is cleared on error too
             Alert.alert('Failed', error.response?.data?.message || 'Could not accept ride');
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -160,9 +161,15 @@ const HomeScreen = () => {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
 
-            <Mapbox.MapView style={styles.map} styleURL={MAPBOX_STYLE_URL} logoEnabled={false}>
+            <Mapbox.MapView
+                style={styles.map}
+                styleURL={MAPBOX_STYLE_URL}
+                logoEnabled={false}
+            >
                 <Mapbox.Camera
-                    zoomLevel={15}
+                    zoomLevel={16}
+                    followZoomLevel={16}
+                    centerCoordinate={[36.8172, -1.2864]} // Default to Nairobi center
                     followUserLocation
                     followUserMode={Mapbox.UserTrackingMode.Follow}
                 />
@@ -172,9 +179,13 @@ const HomeScreen = () => {
             <View style={styles.topOverlay}>
                 <View style={styles.header}>
                     <TouchableOpacity
-                        style={styles.profileCircle}
-                        onPress={logout}
+                        style={[styles.profileButton, { borderColor: isOnline ? Colors.primary : Colors.border }]}
+                        onPress={() => {
+                            // Open side drawer
+                            (navigation as any).openDrawer();
+                        }}
                         onLongPress={() => {
+                            // Debug Trigger for mock ride
                             Alert.alert(
                                 "Debug Mode",
                                 "Simulate a new ride request?",
@@ -240,6 +251,7 @@ const HomeScreen = () => {
             <RideRequestModal
                 visible={showRideModal}
                 rideData={incomingRide}
+                loading={loading}
                 onAccept={handleAcceptRide}
                 onDecline={handleDeclineRide}
             />
@@ -275,7 +287,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-    profileCircle: {
+    profileButton: {
         width: 44,
         height: 44,
         borderRadius: 22,

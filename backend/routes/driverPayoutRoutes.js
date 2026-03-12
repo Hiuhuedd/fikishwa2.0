@@ -7,6 +7,7 @@ const verifyToken = require('../middleware/authMiddleware');
 router.use(verifyToken);
 
 router.get('/daily-history', driverPayoutController.getDailyHistory);
+router.get('/daily', driverPayoutController.getDailyHistory);
 
 
 module.exports = router;

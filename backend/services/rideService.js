@@ -8,6 +8,8 @@ const fareService = require('./fareService');
 const matchingService = require('./matchingService');
 const socketService = require('./socketService');
 const ngeohash = require('ngeohash');
+const configService = require('./configService');
+const vehicleCategoryService = require('./vehicleCategoryService');
 
 const db = getFirestoreApp();
 
@@ -201,60 +203,100 @@ const completeRide = async (rideId, driverId, actualDistanceKm, actualDurationMi
         const rideRef = doc(db, 'rides', rideId);
         const driverRef = doc(db, 'drivers', driverId);
 
+        // Fetch config and category OUTSIDE transaction to avoid read-after-write errors
+        const cachedConfig = await configService.getConfig();
+        const rideSnap = await getDoc(rideRef);
+        let cachedCategory = null;
+        if (rideSnap.exists()) {
+            const tempRideData = rideSnap.data();
+            if (tempRideData.vehicleCategory) {
+                cachedCategory = await vehicleCategoryService.getCategoryDetails(tempRideData.vehicleCategory);
+            }
+        }
+
         const result = await runTransaction(db, async (transaction) => {
+            // 1. ALL READS MUST BE AT THE TOP
             const rideDoc = await transaction.get(rideRef);
             if (!rideDoc.exists()) throw new Error('Ride does not exist');
-
             const rideData = rideDoc.data();
 
+            const driverDoc = await transaction.get(driverRef);
+            const driverData = driverDoc.exists() ? driverDoc.data() : {};
+
+            const customerRef = doc(db, 'customers', rideData.customerId);
+            const customerDoc = await transaction.get(customerRef);
+
+            // 2. VALIDATIONS
             if (rideData.driverId !== driverId) {
                 throw new Error('Unauthorized: This ride does not belong to you');
             }
-
             if (rideData.status !== 'in_progress') {
                 throw new Error('Ride is not in progress');
             }
 
-            // Recalculate final fare with actuals + promo check
-            // Note: We need to know if a promo was applied during request.
-            // Assuming rideData.appliedPromoCode exists if applied during request.
-
+            // 2. FETCH EXTERNAL DATA (Reads) - Move these outside or pass them in
+            // To ensure strict ordering, we already fetched config/category outside the transaction
             const finalFareData = await fareService.calculateFinalFare(
                 actualDistanceKm * 1000,
                 actualDurationMin * 60,
                 (rideData.stops || []).length,
                 rideData.rideType,
                 rideData.appliedPromoCode,
-                rideData.customerId
+                rideData.customerId,
+                rideData.vehicleCategory,
+                null, // parcelDetails
+                cachedConfig,
+                cachedCategory
             );
 
-            // Calculate commission based on DISCOUNTED fare (or original? usually discounted)
-            // Let's assume commission is on the amount the driver actually collects/receives
-            // But if it's a "free ride" promo, driver still needs to be paid.
-            // STRATEGY: Commission is on the ORIGINAL fare to ensure platform revenue is calculated correctly,
-            // or on the FINAL fare. 
-            // Better: Commission is on the "Real Value" of the ride. Driver gets full share.
-            // If user pays 0 (Free Ride), Company owes Driver the full amount - Commission.
-            // For now, simpler approach: Commission on Final Fare.
-            // ADJUSTMENT: If user has a discount, usually the company subsidizes it.
-            // So Driver Share should be calculated on ORIGINAL fare.
-
             const originalFare = finalFareData.originalFare || finalFareData.estimatedFare;
-            const commissionData = await fareService.calculateCommission(originalFare);
+            const commissionData = await fareService.calculateCommission(originalFare, cachedConfig);
 
-            // If promo applied, Company owes Driver the discount amount (subsidized)
-            // effectiveDriverEarnings = DriverShare(based on Original)
-            // UserPays = FinalFare (Discounted)
-            // If Direct-to-Driver: Driver collects UserPays. 
-            //   Driver should have collected OriginalFare. Shortfall = Discount.
-            //   Company owes Driver: Discount.
-            //   Driver owes Company: Commission.
-            //   Net: DriverOwes = Commission - Discount.
+            // Driver stats updates
+            const currentTotalRides = driverData.totalRides || 0;
+            const currentTotalEarnings = driverData.totalEarnings || 0;
+            const weeklyTripCount = (driverData.weeklyTripCount || 0) + 1;
+            const payoutPreference = driverData.payoutPreference || 'direct-to-driver';
+            const previousOwed = driverData.owedCommission || 0;
+            const previousPending = driverData.pendingPayout || 0;
 
-            // Update ride to completed
+            let driverUpdates = {
+                totalRides: currentTotalRides + 1,
+                weeklyTripCount: weeklyTripCount,
+                totalEarnings: currentTotalEarnings + commissionData.driverShare
+            };
+
+            let owedChange = 0;
+            if (payoutPreference === 'direct-to-driver') {
+                owedChange = finalFareData.estimatedFare - commissionData.driverShare;
+                driverUpdates.owedCommission = previousOwed + owedChange;
+            } else {
+                driverUpdates.pendingPayout = previousPending + commissionData.driverShare;
+            }
+
+            // Bonus logic
+            const BONUS_THRESHOLD = 20;
+            const BONUS_AMOUNT = 500;
+            let bonusAwarded = false;
+            if (weeklyTripCount % BONUS_THRESHOLD === 0) {
+                const currentBonuses = driverData.earnedBonuses || [];
+                currentBonuses.push({
+                    id: Math.random().toString(36).substr(2, 9),
+                    type: 'driver_completion',
+                    value: BONUS_AMOUNT,
+                    description: `Bonus for completing ${weeklyTripCount} trips`,
+                    used: false,
+                    issuedAt: new Date().toISOString(),
+                    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                });
+                driverUpdates.earnedBonuses = currentBonuses;
+                bonusAwarded = true;
+            }
+
+            // 4. ALL WRITES AT THE BOTTOM
             transaction.update(rideRef, {
                 status: 'completed',
-                finalFare: finalFareData.estimatedFare, // What user pays/is charged
+                finalFare: finalFareData.estimatedFare,
                 originalFare: originalFare,
                 discountAmount: finalFareData.discountAmount || 0,
                 appliedPromoCode: finalFareData.appliedPromoCode || null,
@@ -266,89 +308,11 @@ const completeRide = async (rideId, driverId, actualDistanceKm, actualDurationMi
                 updatedAt: serverTimestamp()
             });
 
-            // Handle Promo Usage Count
-            if (finalFareData.appliedPromoCode) {
-                const promotionService = require('./promotionService');
-                await promotionService.redeemPromotion(finalFareData.appliedPromoCode, rideData.customerId, rideId);
-            }
-
-            // Update driver stats
-            const driverDoc = await transaction.get(driverRef);
-            const driverData = driverDoc.exists() ? driverDoc.data() : {};
-
-            const currentTotalRides = driverData.totalRides || 0;
-            const currentTotalEarnings = driverData.totalEarnings || 0;
-            const weeklyTripCount = (driverData.weeklyTripCount || 0) + 1;
-            const payoutPreference = driverData.payoutPreference || 'direct-to-driver';
-            const previousOwed = driverData.owedCommission || 0;
-            const previousPending = driverData.pendingPayout || 0;
-
-            let updates = {
-                totalRides: currentTotalRides + 1,
-                weeklyTripCount: weeklyTripCount,
-                totalEarnings: currentTotalEarnings + commissionData.driverShare
-            };
-
-            // Commission & Payout Logic with Promo handling
-            let owedChange = 0;
-            let pendingChange = 0;
-
-            if (payoutPreference === 'direct-to-driver') {
-                // Driver collected FinalFare (User Pays)
-                // Driver SHOULD have kept DriverShare.
-                // Surplus/Deficit = Collected - DriverShare
-                // e.g. Ride 1000, Comm 100, DriverShare 900.
-                // Case A: No Promo. User pays 1000. Driver has 1000. Driver owes 100.
-                // Case B: 50% Promo. User pays 500. Driver has 500. Driver should have 900.
-                //         Driver is SHORT 400.
-                //         Driver owes 100 commission.
-                //         Net: Driver owes 100 - 400 = -300 (Company owes Driver 300).
-
-                const collectedByDriver = finalFareData.estimatedFare;
-                const driverShouldKeep = commissionData.driverShare;
-
-                // Positive = Driver owes company. Negative = Company owes driver.
-                owedChange = collectedByDriver - driverShouldKeep;
-
-                updates.owedCommission = previousOwed + owedChange;
-            } else {
-                // App-managed. Company collects FinalFare.
-                // Company owes driver DriverShare.
-                pendingChange = commissionData.driverShare;
-                updates.pendingPayout = previousPending + pendingChange;
-            }
-
-            // Check Driver Bonus (Simple Config: 20 trips = 500 KES)
-            // Ideally fetch from admin config
-            const BONUS_THRESHOLD = 20;
-            const BONUS_AMOUNT = 500;
-            let bonusAwarded = false;
-
-            if (weeklyTripCount % BONUS_THRESHOLD === 0) {
-                // Award bonus
-                const bonus = {
-                    type: 'driver_completion',
-                    value: BONUS_AMOUNT,
-                    description: `Bonus for completing ${weeklyTripCount} trips`,
-                    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-                };
-
-                const currentBonuses = driverData.earnedBonuses || [];
-                currentBonuses.push({ ...bonus, id: Math.random().toString(36).substr(2, 9), used: false, issuedAt: new Date().toISOString() });
-                updates.earnedBonuses = currentBonuses;
-                bonusAwarded = true;
-            }
-
-            transaction.update(driverRef, updates);
-
-            // Update customer stats
-            const customerRef = doc(db, 'customers', rideData.customerId);
-            const customerDoc = await transaction.get(customerRef);
+            transaction.update(driverRef, driverUpdates);
 
             if (customerDoc.exists()) {
                 const customerData = customerDoc.data();
                 const summary = customerData.rideHistorySummary || { totalRides: 0, totalSpent: 0 };
-
                 transaction.update(customerRef, {
                     rideHistorySummary: {
                         totalRides: summary.totalRides + 1,
@@ -369,9 +333,10 @@ const completeRide = async (rideId, driverId, actualDistanceKm, actualDurationMi
                 driverShare: commissionData.driverShare,
                 payoutPreference,
                 previousOwed,
-                newOwed: updates.owedCommission || previousOwed,
+                newOwed: driverUpdates.owedCommission || previousOwed,
                 bonusAwarded,
                 weeklyTripCount,
+                appliedPromoCode: finalFareData.appliedPromoCode,
                 rideData: {
                     ...rideData,
                     finalFare: finalFareData.estimatedFare,
@@ -381,6 +346,12 @@ const completeRide = async (rideId, driverId, actualDistanceKm, actualDurationMi
                 }
             };
         });
+
+        // 5. SIDE EFFECTS OUTSIDE TRANSACTION
+        if (result.appliedPromoCode) {
+            const promotionService = require('./promotionService');
+            await promotionService.redeemPromotion(result.appliedPromoCode, result.customerId, rideId);
+        }
 
         // Emit completion events via Socket.io
         socketService.emitToUser(result.customerId, 'ride-completed', {

@@ -25,6 +25,8 @@ exports.getDailyHistory = async (req, res) => {
 
         // Fetch completed rides for this driver in range
         const ridesRef = collection(db, 'rides');
+        console.log(`Querying rides for [${driverId}] from [${startDate.toISOString()}] to [${endDate.toISOString()}]`);
+
         const q = query(
             ridesRef,
             where('driverId', '==', driverId),
@@ -35,6 +37,7 @@ exports.getDailyHistory = async (req, res) => {
         );
 
         const snapshot = await getDocs(q);
+        console.log('Query successful, found trips:', snapshot.size);
         const trips = [];
         let totalFare = 0;
         let totalCommission = 0;
@@ -52,9 +55,11 @@ exports.getDailyHistory = async (req, res) => {
 
             trips.push({
                 rideId: doc.id,
-                time: data.completedAt ? data.completedAt.toDate().toLocaleTimeString() : '',
-                pickup: data.pickup.address,
-                dropoff: data.dropoff.address,
+                time: (data.completedAt && typeof data.completedAt.toDate === 'function')
+                    ? data.completedAt.toDate().toLocaleTimeString()
+                    : (data.completedAt ? new Date(data.completedAt).toLocaleTimeString() : ''),
+                pickup: data.pickup?.address || 'Unknown Pickup',
+                dropoff: data.dropoff?.address || 'Unknown Dropoff',
                 fare: fare,
                 commission: com,
                 driverShare: share,
@@ -81,8 +86,8 @@ exports.getDailyHistory = async (req, res) => {
         let paymentInstructions = null;
         if (summary.currentOwedCommission > 0) {
             paymentInstructions = {
-                paybill: "FIKISHWA_PAYBILL", // In real config
-                accountNumber: driverData.phone,
+                paybill: "FIKISHWA_PAYBILL",
+                accountNumber: driverData.phone || 'N/A',
                 amount: summary.currentOwedCommission,
                 instructions: "Go to M-Pesa > Paybill > Enter Paybill No > Account No > Amount"
             };
@@ -96,6 +101,13 @@ exports.getDailyHistory = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('--- Get Daily History Error Deep Dive ---');
+        console.error('Message:', error.message);
+        console.error('Code:', error.code);
+        if (error.customData) console.error('Custom Data:', error.customData);
+        if (error.details) console.error('Details:', error.details);
+        console.error('Stack:', error.stack);
+        console.error('-----------------------------------------');
         res.status(500).json({ success: false, error: error.message });
     }
 };
