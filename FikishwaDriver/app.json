@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "FikishwaDriver",
+    "name": "Fikishwa Driver",
     "slug": "FikishwaDriver",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,14 +15,7 @@
       "supportsTablet": true
     },
     "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
-      "predictiveBackGestureEnabled": false,
-      "usesCleartextTraffic": true,
+      "package": "com.fikishwa.driver",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyCTC78aB0ukv5ERXLwBM_tyiFIy13697wc"

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Fikishwa Customer",
+    "name": "Fikishwa",
     "slug": "fikishwacustomer",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -52,6 +52,11 @@
           "locationAlwaysAndWhenInUsePermission": "Allow Fikishwa to use your location."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "0f9cf6ab-52dd-45cd-9ad4-71bb5dfff3b0"
+      }
+    }
   }
 }

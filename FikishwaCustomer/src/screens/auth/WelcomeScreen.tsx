@@ -20,7 +20,7 @@ const WelcomeScreen = () => {
                 {/* Illustration */}
                 <View style={styles.imageContainer}>
                     <Image
-                        source={require('../../assets/images/welcome_illustration.png')}
+                        source={require('../../assets/images/welcome_illustration.jpg')}
                         style={styles.image}
                         resizeMode="contain"
                     />

@@ -7,7 +7,7 @@ export const USER_KEY = '@fikishwa_driver_user';
 
 // API Configuration
 // Update this with your actual backend URL
-export const API_BASE_URL = 'http://192.168.100.6:3000';
+export const API_BASE_URL = 'https://fikishwa2-0-backend.onrender.com';
 
 // Create axios instance
 const api = axios.create({

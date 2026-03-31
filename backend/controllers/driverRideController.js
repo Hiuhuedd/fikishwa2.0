@@ -10,6 +10,7 @@ const db = getFirestoreApp();
  * Go online
  */
 exports.goOnline = async (req, res) => {
+    console.log(`📋 [CONTROLLER] goOnline called by ${req.user.uid}`);
     const { location, selectedCategory } = req.body;
     const driverId = req.user.uid;
 
@@ -27,11 +28,12 @@ exports.goOnline = async (req, res) => {
         }
 
         const data = driverDoc.data();
-        if (data.registrationStatus !== 'approved') {
+        const allowedStatuses = ['approved', 'pending', 'pending_review'];
+        if (!allowedStatuses.includes(data.registrationStatus)) {
             return res.status(403).json({
                 success: false,
                 error: 'FORBIDDEN',
-                message: 'Your account is under review or not yet approved. You cannot go online.'
+                message: 'Your account status does not allow you to go online.'
             });
         }
 

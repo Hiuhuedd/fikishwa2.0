@@ -25,9 +25,22 @@ const PORT = process.env.PORT || 3000;
 socketService.initSocket(server);
 
 // Middleware
-// NOTE: For production deployment (e.g. Render), restrict CORS to specific domains
-// app.use(cors({ origin: ['https://fikishwa.app', 'https://admin.fikishwa.app'] }));
-app.use(cors());
+const corsOptions = {
+    origin: process.env.NODE_ENV === 'production'
+        ? ['https://fikishwa2-0-backend.onrender.com', 'https://fikishwa.app']
+        : true, // Allow all in dev
+    credentials: true,
+};
+app.use(cors(corsOptions));
+
+// Rate Limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: { error: 'Too many requests, please try again later.' }
+});
+app.use('/api/', limiter);
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

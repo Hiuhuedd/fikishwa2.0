@@ -24,7 +24,7 @@ const SuccessScreen = () => {
                 {/* Illustration */}
                 <View style={styles.imageContainer}>
                     <Image
-                        source={require('../../assets/images/success_illustration.png')}
+                        source={require('../../assets/images/success_illustration.jpg')}
                         style={styles.image}
                         resizeMode="contain"
                     />
