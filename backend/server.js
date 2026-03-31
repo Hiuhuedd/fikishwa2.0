@@ -2,6 +2,7 @@ console.log('🏁 Backend server.js starting up...');
 const express = require('express');
 const http = require('http'); // Added for Socket.io
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const bodyParser = require('body-parser');
 const path = require('path');
 require('dotenv').config();
