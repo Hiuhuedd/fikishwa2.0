@@ -1,343 +1,376 @@
 import React, { useState, useEffect } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-    ScrollView,
-    StatusBar,
-    ActivityIndicator,
-    RefreshControl,
-    Dimensions
-} from 'react-native';
-import { Colors, Spacing, FontSizes } from '../../theme';
-import {
-    ChevronLeft,
-    TrendingUp,
-    Calendar,
-    Wallet,
-    ChevronRight,
-    MapPin,
-    Clock,
-    DollarSign
-} from 'lucide-react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, FlatList, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import { ChevronLeft, Wallet, TrendingUp, Clock, AlertCircle, ChevronRight } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MainStackParamList } from '../../navigation/MainNavigator';
 import api from '../../services/api';
+import driverApiService from '../../services/driverApiService';
 
-const { width } = Dimensions.get('window');
+type NavigationProp = NativeStackNavigationProp<MainStackParamList, 'Earnings'>;
 
-const EarningsScreen = ({ navigation }: any) => {
+const EarningsScreen = () => {
+    const navigation = useNavigation<NavigationProp>();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [summary, setSummary] = useState<any>(null);
-    const [trips, setTrips] = useState<any[]>([]);
+    const [earningsData, setEarningsData] = useState<any>(null);
+    const [payouts, setPayouts] = useState<any[]>([]);
 
-    useEffect(() => {
-        fetchEarnings();
-    }, []);
-
-    const fetchEarnings = async () => {
+    const fetchData = async () => {
         try {
-            setLoading(true);
-            const response = await api.get('/driver/payout/daily');
-            if (response.data.success) {
-                setSummary(response.data.summary);
-                setTrips(response.data.trips);
+            const [payoutRes] = await Promise.all([
+                driverApiService.getDailyPayout()
+            ]);
+            if (payoutRes.data.success) {
+                setEarningsData(payoutRes.data.summary);
+                setPayouts(payoutRes.data.trips || []);
             }
         } catch (error) {
-            console.error('Fetch earnings error:', error);
+            console.error('Failed to fetch earnings data:', error);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     };
 
+    useEffect(() => {
+        fetchData();
+    }, []);
+
     const onRefresh = () => {
         setRefreshing(true);
-        fetchEarnings();
+        fetchData();
     };
-
-    const renderHeader = () => (
-        <View style={styles.header}>
-            <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-            >
-                <ChevronLeft size={24} color={Colors.white} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Earnings</Text>
-            <View style={{ width: 40 }} />
-        </View>
-    );
-
-    const renderSummaryCards = () => (
-        <View style={styles.summaryContainer}>
-            <View style={styles.mainCard}>
-                <Text style={styles.cardLabel}>TODAY'S EARNINGS</Text>
-                <Text style={styles.earningsAmount}>
-                    KES {summary?.totalDriverShare || 0}
-                </Text>
-                <View style={styles.statsRow}>
-                    <View style={styles.statItem}>
-                        <TrendingUp size={16} color={Colors.primary} />
-                        <Text style={styles.statText}>{summary?.totalTrips || 0} Trips</Text>
-                    </View>
-                    <View style={[styles.statItem, { marginLeft: Spacing.md }]}>
-                        <Clock size={16} color={Colors.primary} />
-                        <Text style={styles.statText}>4.2 hrs</Text>
-                    </View>
-                </View>
-            </View>
-
-            <View style={styles.walletRow}>
-                <View style={styles.walletCard}>
-                    <Wallet size={20} color={Colors.primary} />
-                    <View style={{ marginLeft: 10 }}>
-                        <Text style={styles.walletLabel}>Owed Commission</Text>
-                        <Text style={styles.walletValue}>KES {summary?.currentOwedCommission || 0}</Text>
-                    </View>
-                </View>
-                <View style={[styles.walletCard, { marginLeft: Spacing.sm }]}>
-                    <DollarSign size={20} color={Colors.primary} />
-                    <View style={{ marginLeft: 10 }}>
-                        <Text style={styles.walletLabel}>Pending Payout</Text>
-                        <Text style={styles.walletValue}>KES {summary?.pendingPayout || 0}</Text>
-                    </View>
-                </View>
-            </View>
-        </View>
-    );
-
-    const renderTripItem = (trip: any) => (
-        <TouchableOpacity key={trip.rideId} style={styles.tripCard}>
-            <View style={styles.tripHeader}>
-                <Text style={styles.tripTime}>{trip.time}</Text>
-                <Text style={styles.tripAmount}>+ KES {trip.driverShare}</Text>
-            </View>
-            <View style={styles.addressLine}>
-                <View style={[styles.dot, { backgroundColor: Colors.success }]} />
-                <Text style={styles.addressText} numberOfLines={1}>{trip.pickup}</Text>
-            </View>
-            <View style={styles.verticalDash} />
-            <View style={styles.addressLine}>
-                <View style={[styles.dot, { backgroundColor: Colors.error }]} />
-                <Text style={styles.addressText} numberOfLines={1}>{trip.dropoff}</Text>
-            </View>
-        </TouchableOpacity>
-    );
 
     if (loading && !refreshing) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={Colors.primary} />
+            <View style={styles.centered}>
+                <ActivityIndicator size="large" color="#007AFF" />
             </View>
         );
     }
 
+    const renderTripItem = ({ item }: { item: any }) => (
+        <TouchableOpacity style={styles.tripItem}>
+            <View style={styles.tripIconContainer}>
+                <Clock size={20} color="#007AFF" />
+            </View>
+            <View style={styles.tripDetails}>
+                <Text style={styles.tripDate}>{item.time}</Text>
+                <Text style={styles.tripLocation} numberOfLines={1}>{item.dropoff || 'Trip'}</Text>
+            </View>
+            <View style={styles.tripAmountContainer}>
+                <Text style={styles.tripAmount}>KES {item.driverShare?.toFixed(2) || '0.00'}</Text>
+                <ChevronRight size={16} color="#C7C7CC" />
+            </View>
+        </TouchableOpacity>
+    );
+
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" />
-            {renderHeader()}
+        <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <ChevronLeft size={28} color="#1A1A1A" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Earnings</Text>
+                <View style={{ width: 40 }} />
+            </View>
 
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
-                }
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
-                {renderSummaryCards()}
+                {/* Summary Card */}
+                <View style={styles.summaryCard}>
+                    <Text style={styles.summaryLabel}>Total Balance</Text>
+                    <Text style={styles.summaryAmount}>KES {earningsData?.totalEarnings?.toFixed(2) || '0.00'}</Text>
 
+                    <View style={styles.statsRow}>
+                        <View style={styles.statItem}>
+                            <TrendingUp size={16} color="#4CD964" />
+                            <Text style={styles.statLabel}>Trips</Text>
+                            <Text style={styles.statValue}>{earningsData?.totalTrips || 0}</Text>
+                        </View>
+                        <View style={[styles.statItem, { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.2)' }]}>
+                            <Clock size={16} color="rgba(255,255,255,0.8)" />
+                            <Text style={styles.statLabel}>Hours</Text>
+                            <Text style={styles.statValue}>--</Text>
+                        </View>
+                        <View style={[styles.statItem, { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.2)' }]}>
+                            <Wallet size={16} color="rgba(255,255,255,0.8)" />
+                            <Text style={styles.statLabel}>Tips</Text>
+                            <Text style={styles.statValue}>KES 0.00</Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Commission Warning */}
+                {earningsData?.currentOwedCommission > 0 && (
+                    <View style={styles.warningCard}>
+                        <AlertCircle size={20} color="#FF3B30" />
+                        <View style={styles.warningTextContainer}>
+                            <Text style={styles.warningTitle}>Commission Owed</Text>
+                            <Text style={styles.warningSub}>KES {earningsData.currentOwedCommission.toFixed(2)} pending settlement</Text>
+                        </View>
+                        <TouchableOpacity style={styles.payButton} onPress={() => Alert.alert('Payment', 'Commission settlement via M-Pesa is being initialized.')}>
+                            <Text style={styles.payButtonText}>Pay Now</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* Recent Trips */}
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Recent Trips</Text>
+                    <Text style={styles.sectionTitle}>Recent Activities</Text>
                     <TouchableOpacity>
-                        <Text style={styles.viewAll}>See All</Text>
+                        <Text style={styles.seeAllText}>See All</Text>
                     </TouchableOpacity>
                 </View>
 
-                {trips.length > 0 ? (
-                    trips.map(renderTripItem)
-                ) : (
-                    <View style={styles.emptyContainer}>
-                        <Calendar size={48} color={Colors.textTertiary} />
-                        <Text style={styles.emptyText}>No trips completed yet today.</Text>
-                    </View>
+                <FlatList
+                    data={payouts}
+                    renderItem={renderTripItem}
+                    keyExtractor={(item) => item.rideId}
+                    scrollEnabled={false}
+                    ListEmptyComponent={
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyText}>No recent trips found</Text>
+                        </View>
+                    }
+                />
+
+                {/* Payout History */}
+                {payouts.length > 0 && (
+                    <>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Payout History</Text>
+                        </View>
+                        {payouts.map((payout, index) => (
+                            <View key={index} style={styles.payoutItem}>
+                                <View style={styles.payoutInfo}>
+                                    <Text style={styles.payoutDate}>{new Date(payout.date).toLocaleDateString()}</Text>
+                                    <Text style={styles.payoutStatus}>{payout.status}</Text>
+                                </View>
+                                <Text style={styles.payoutAmount}>+KES {payout.amount.toFixed(2)}</Text>
+                            </View>
+                        ))}
+                    </>
                 )}
             </ScrollView>
-        </View>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: '#F8F9FB',
     },
-    loadingContainer: {
+    centered: {
         flex: 1,
-        backgroundColor: Colors.background,
         justifyContent: 'center',
         alignItems: 'center',
     },
     header: {
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: Spacing.lg,
-        paddingTop: 60,
-        paddingBottom: Spacing.md,
-    },
-    headerTitle: {
-        color: Colors.white,
-        fontSize: FontSizes.lg,
-        fontWeight: 'bold',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#fff',
     },
     backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: Colors.backgroundLighter,
-        justifyContent: 'center',
-        alignItems: 'center',
+        padding: 4,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1A1A1A',
     },
     scrollContent: {
-        paddingHorizontal: Spacing.lg,
-        paddingBottom: 40,
+        padding: 16,
     },
-    summaryContainer: {
-        marginTop: Spacing.md,
-    },
-    mainCard: {
-        backgroundColor: Colors.primary,
+    summaryCard: {
+        backgroundColor: '#007AFF',
         borderRadius: 24,
-        padding: Spacing.xl,
-        shadowColor: Colors.primary,
+        padding: 24,
+        alignItems: 'center',
+        marginBottom: 20,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.1,
         shadowRadius: 20,
         elevation: 10,
     },
-    cardLabel: {
-        color: 'rgba(255,255,255,0.7)',
-        fontSize: 12,
-        fontWeight: '900',
-        letterSpacing: 1,
+    summaryLabel: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 14,
+        fontWeight: '500',
+        marginBottom: 8,
     },
-    earningsAmount: {
-        color: Colors.white,
+    summaryAmount: {
+        color: '#fff',
         fontSize: 36,
-        fontWeight: 'bold',
-        marginVertical: Spacing.xs,
+        fontWeight: '800',
+        marginBottom: 24,
     },
     statsRow: {
         flexDirection: 'row',
-        marginTop: Spacing.sm,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 16,
+        paddingVertical: 12,
+        width: '100%',
     },
     statItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
-    },
-    statText: {
-        color: Colors.white,
-        fontSize: 12,
-        fontWeight: 'bold',
-        marginLeft: 6,
-    },
-    walletRow: {
-        flexDirection: 'row',
-        marginTop: Spacing.md,
-    },
-    walletCard: {
         flex: 1,
-        backgroundColor: Colors.backgroundLighter,
-        borderRadius: 16,
-        padding: Spacing.md,
+        alignItems: 'center',
+        gap: 4,
+    },
+    statLabel: {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 12,
+    },
+    statValue: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    warningCard: {
         flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#FFF2F2',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 24,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: '#FFDEDE',
     },
-    walletLabel: {
-        color: Colors.textSecondary,
-        fontSize: 10,
+    warningTextContainer: {
+        flex: 1,
+        marginLeft: 12,
     },
-    walletValue: {
-        color: Colors.white,
-        fontSize: 14,
-        fontWeight: 'bold',
+    warningTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#FF3B30',
+    },
+    warningSub: {
+        fontSize: 13,
+        color: '#FF3B30',
+        opacity: 0.8,
+    },
+    payButton: {
+        backgroundColor: '#FF3B30',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
+    payButtonText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '700',
     },
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: Spacing.xxl,
-        marginBottom: Spacing.md,
+        marginTop: 8,
+        marginBottom: 16,
     },
     sectionTitle: {
-        color: Colors.white,
-        fontSize: FontSizes.md,
-        fontWeight: 'bold',
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1A1A1A',
     },
-    viewAll: {
-        color: Colors.primary,
-        fontSize: FontSizes.sm,
+    seeAllText: {
+        color: '#007AFF',
+        fontSize: 14,
         fontWeight: '600',
     },
-    tripCard: {
-        backgroundColor: Colors.backgroundLighter,
+    tripItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 16,
         borderRadius: 16,
-        padding: Spacing.md,
-        marginBottom: Spacing.sm,
-        borderWidth: 1,
-        borderColor: Colors.border,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 2,
     },
-    tripHeader: {
+    tripIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F0F7FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    tripDetails: {
+        flex: 1,
+    },
+    tripDate: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#1A1A1A',
+    },
+    tripLocation: {
+        fontSize: 13,
+        color: '#8E8E93',
+        marginTop: 2,
+    },
+    tripAmountContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    tripAmount: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1A1A1A',
+    },
+    emptyState: {
+        padding: 40,
+        alignItems: 'center',
+    },
+    emptyText: {
+        color: '#8E8E93',
+        fontSize: 14,
+    },
+    payoutItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: Spacing.sm,
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 2,
     },
-    tripTime: {
-        color: Colors.textSecondary,
+    payoutInfo: {
+        gap: 2,
+    },
+    payoutDate: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#1A1A1A',
+    },
+    payoutStatus: {
         fontSize: 12,
+        color: '#4CD964',
+        textTransform: 'capitalize',
     },
-    tripAmount: {
-        color: Colors.primary,
-        fontWeight: 'bold',
-        fontSize: 14,
+    payoutAmount: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#4CD964',
     },
-    addressLine: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    dot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        marginRight: 10,
-    },
-    addressText: {
-        color: Colors.textPrimary,
-        fontSize: 13,
-        flex: 1,
-    },
-    verticalDash: {
-        width: 1,
-        height: 8,
-        backgroundColor: Colors.border,
-        marginLeft: 2.5,
-        marginVertical: 2,
-    },
-    emptyContainer: {
-        alignItems: 'center',
-        marginTop: 60,
-    },
-    emptyText: {
-        color: Colors.textSecondary,
-        marginTop: Spacing.md,
-    }
 });
 
 export default EarningsScreen;

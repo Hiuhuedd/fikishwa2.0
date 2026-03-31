@@ -36,14 +36,15 @@ const requestRide = async (customerData) => {
             vehicleCategory
         );
 
-        // 3. Create Ride document
-        const rideRef = await addDoc(collection(db, 'rides'), {
+        console.log('[RideService] Final doc check - rideType:', rideType || 'standard', ' (raw value:', rideType, ')');
+
+        const finalRideData = {
             customerId,
             pickup,
             stops: stops || [],
             dropoff,
-            rideType,
-            vehicleCategory: vehicleCategory || 'standard', // Store category
+            rideType: rideType || 'standard',
+            vehicleCategory: vehicleCategory || rideType || 'standard', // Store category
             paymentMethod,
             status: 'searching',
             estimatedFare: estimate.estimatedFare,
@@ -55,21 +56,44 @@ const requestRide = async (customerData) => {
             routePolyline: routeData.geometry,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
+        };
+
+        // Safety check: Filter out any undefined keys
+        Object.keys(finalRideData).forEach(key => {
+            if (finalRideData[key] === undefined) {
+                console.error(`[RideService] CRITICAL: Field ${key} is undefined! Removing to prevent Firestore crash.`);
+                delete finalRideData[key];
+            }
         });
+
+        // 3. Create Ride document
+        const rideRef = await addDoc(collection(db, 'rides'), finalRideData);
 
         const rideId = rideRef.id;
 
         // 4. Create temporary ride request for matching
         const pickupGeohash = ngeohash.encode(pickup.lat, pickup.lng, 6);
-        await setDoc(doc(db, 'rideRequests', rideId), {
+        const rideRequestData = {
             rideId,
             pickup,
             geohash: pickupGeohash,
-            rideType,
-            vehicleCategory: vehicleCategory || null,
+            rideType: rideType || 'standard',
+            vehicleCategory: vehicleCategory || rideType || 'standard',
             estimatedFare: estimate.estimatedFare,
+            customerName: customerData.customerName || 'Customer',
+            stops: stops || [],
+            dropoff: dropoff,
             createdAt: serverTimestamp()
+        };
+
+        // Safety check
+        Object.keys(rideRequestData).forEach(key => {
+            if (rideRequestData[key] === undefined) {
+                delete rideRequestData[key];
+            }
         });
+
+        await setDoc(doc(db, 'rideRequests', rideId), rideRequestData);
 
         // 5. Find nearby drivers (filtered by category) and notify
         const nearbyDrivers = await matchingService.findNearbyDrivers(pickup, 10, vehicleCategory);
@@ -80,8 +104,8 @@ const requestRide = async (customerData) => {
             pickup,
             stops,
             dropoff,
-            rideType,
-            vehicleCategory, // Send to driver to show category
+            rideType: rideType || 'standard',
+            vehicleCategory: vehicleCategory || 'standard', // Send to driver to show category
             fare: estimate.estimatedFare,
             customerName: customerData.customerName || 'Customer'
         });
@@ -102,7 +126,15 @@ const requestRide = async (customerData) => {
             }
         }, 90000);
 
-        return { rideId, ...estimate };
+        console.log(`[RideService] Returning ride response for ${rideId}. Fare: ${estimate.estimatedFare}`);
+
+        return {
+            rideId,
+            estimatedFare: estimate.estimatedFare,
+            distanceKm: estimate.distanceKm,
+            durationMin: estimate.durationMin,
+            ...estimate
+        };
     } catch (error) {
         console.error('Request Ride Error:', error);
         throw error;
@@ -156,7 +188,13 @@ const acceptRide = async (rideId, driverId, driverDetails) => {
             driverDetails: driverDetails
         });
 
-        return result.rideData;
+        return {
+            rideId,
+            ...result.rideData,
+            status: 'accepted',
+            driverId: driverId,
+            driverDetails: driverDetails
+        };
     } catch (error) {
         console.error('Accept Ride Error:', error);
         throw error;
@@ -178,6 +216,7 @@ const updateRideStatus = async (rideId, status, extraData = {}) => {
         const rideDoc = await getDoc(rideRef);
         const rideData = rideDoc.data();
 
+        console.log(`📡 [rideService] Emitting 'ride-status-update' (${status}) to customer: ${rideData.customerId}`);
         // Notify customer
         socketService.emitToUser(rideData.customerId, 'ride-status-update', {
             rideId,
@@ -185,7 +224,25 @@ const updateRideStatus = async (rideId, status, extraData = {}) => {
             ...extraData
         });
 
-        return rideData;
+        // Notify driver if assigned
+        if (rideData.driverId) {
+            socketService.emitToUser(rideData.driverId, 'ride-status-update', {
+                rideId,
+                status,
+                ...extraData
+            });
+
+            // Specific event for cancellation to trigger driver app cleanup
+            if (status === 'cancelled') {
+                socketService.emitToUser(rideData.driverId, 'ride-cancelled', {
+                    rideId,
+                    cancelledBy: extraData.cancelledBy || 'customer',
+                    reason: extraData.cancellationReason || 'Cancelled by customer'
+                });
+            }
+        }
+
+        return { rideId, ...rideData };
     } catch (error) {
         console.error('Update Ride Status Error:', error);
         throw error;
@@ -401,7 +458,7 @@ const completeRide = async (rideId, driverId, actualDistanceKm, actualDurationMi
             await commissionEnforcement.checkAndEnforceOwedCommission(driverId);
         }
 
-        return result.rideData;
+        return { rideId, ...result.rideData };
     } catch (error) {
         console.error('Complete Ride Error:', error);
         throw error;

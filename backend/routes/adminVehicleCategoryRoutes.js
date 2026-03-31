@@ -8,6 +8,11 @@ const { checkRole } = require('../middleware/roleMiddleware');
 router.use(verifyToken);
 router.use(checkRole('admin'));
 
+router.use((req, res, next) => {
+    console.log(`🚗 Entering Vehicle Category Router: ${req.method} ${req.url}`);
+    next();
+});
+
 router.get('/', adminVehicleCategoryController.getAllCategories);
 router.post('/create', adminVehicleCategoryController.createCategory);
 router.post('/:categoryId/update', adminVehicleCategoryController.updateCategory);

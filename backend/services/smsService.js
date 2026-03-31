@@ -196,6 +196,29 @@ Please fix the issue and resubmit your documents. Thank you.`;
     }
 
     /**
+     * Send specific document feedback SMS
+     */
+    async generateDocumentFeedbackSMS(driverName, driverPhone, documentLabel, status, reason) {
+        try {
+            let message = '';
+            if (status === 'rejected') {
+                message = `Dear ${driverName}, your uploaded "${documentLabel}" was REJECTED.
+Reason: ${reason || 'Incomplete or invalid'}
+Please upload a clear copy in the app.`;
+            } else if (status === 'approved') {
+                message = `Dear ${driverName}, your "${documentLabel}" has been VERIFIED. Status: APPROVED.`;
+            }
+
+            if (message) {
+                await this.sendSMS(driverPhone, message, 'admin', 'document_feedback');
+                console.log(`✅ Document feedback SMS (${status}) sent to ${driverName}`);
+            }
+        } catch (error) {
+            console.error('❌ Failed to send document feedback SMS:', error.message);
+        }
+    }
+
+    /**
 
 
     /**

@@ -1,23 +1,36 @@
-import axios from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { API_BASE_URL } from '../config/api';
+// Storage keys
+export const TOKEN_KEY = '@fikishwa_driver_token';
+export const USER_KEY = '@fikishwa_driver_user';
 
-const API_URL = `${API_BASE_URL}/api`;
+// API Configuration
+// Update this with your actual backend URL
+export const API_BASE_URL = 'http://192.168.100.6:3000';
 
+// Create axios instance
 const api = axios.create({
-    baseURL: API_URL,
+    baseURL: API_BASE_URL,
     timeout: 30000,
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
+// Request interceptor - Add auth token
 api.interceptors.request.use(
-    async (config) => {
-        const token = await AsyncStorage.getItem('driverToken');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+    async (config: InternalAxiosRequestConfig) => {
+        const fullUrl = `${config.baseURL}${config.url}`;
+        console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${fullUrl}`);
+
+        try {
+            const token = await AsyncStorage.getItem(TOKEN_KEY);
+            if (token && config.headers) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+        } catch (error) {
+            console.error('Error getting token:', error);
         }
         return config;
     },
@@ -26,16 +39,14 @@ api.interceptors.request.use(
     }
 );
 
+// Response interceptor - Handle errors
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
-        console.error('API Error:', {
-            url: error.config?.url,
-            baseURL: error.config?.baseURL,
-            message: error.message,
-            status: error.response?.status,
-            data: error.response?.data
-        });
+    async (error: AxiosError) => {
+        if (error.response?.status === 401) {
+            // Token expired or invalid - clear storage
+            await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+        }
         return Promise.reject(error);
     }
 );

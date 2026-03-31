@@ -1,22 +1,22 @@
-import React, { useEffect } from 'react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import AppNavigator from './src/navigation/AppNavigator';
-import { StatusBar } from 'react-native';
-import { Colors } from './src/theme';
-import Mapbox from '@rnmapbox/maps';
-import { MAPBOX_ACCESS_TOKEN } from './src/config';
+import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, View } from 'react-native';
+import { RootNavigator } from './src/navigation/RootNavigator';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// Initialize Mapbox
-Mapbox.setAccessToken(MAPBOX_ACCESS_TOKEN);
-
-const App = () => {
+export default function App() {
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
-      <AppNavigator />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <RootNavigator />
+        <StatusBar style="auto" />
+      </View>
+    </GestureHandlerRootView>
   );
-};
+}
 
-export default App;
-
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+});

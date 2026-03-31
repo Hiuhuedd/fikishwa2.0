@@ -13,7 +13,8 @@ import {
     Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { ArrowLeft, RotateCw } from 'lucide-react-native';
 import { Colors, Spacing, FontSizes, FontWeights, BorderRadius, Shadows } from '../../theme';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import PromoCard from '../../components/PromoCard';
@@ -63,8 +64,8 @@ const PromotionsScreen: React.FC = () => {
         fetchPromotions();
     }, []);
 
-    const openDrawer = () => {
-        navigation.dispatch(DrawerActions.openDrawer());
+    const handleBack = () => {
+        navigation.goBack();
     };
 
     const handleDelete = (promoCode: string) => {
@@ -145,12 +146,12 @@ const PromotionsScreen: React.FC = () => {
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={openDrawer} style={styles.menuButton}>
-                    <Text style={styles.menuIcon}>☰</Text>
+                <TouchableOpacity onPress={handleBack} style={styles.menuButton}>
+                    <ArrowLeft size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Promotions</Text>
                 <TouchableOpacity onPress={fetchPromotions} style={styles.refreshButton}>
-                    <Text style={styles.refreshIcon}>↻</Text>
+                    <RotateCw size={22} color={Colors.primary} />
                 </TouchableOpacity>
             </View>
 

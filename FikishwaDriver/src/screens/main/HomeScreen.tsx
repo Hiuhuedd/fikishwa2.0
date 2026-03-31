@@ -1,412 +1,500 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, StatusBar, Alert } from 'react-native';
-import Mapbox from '@rnmapbox/maps';
-import { locationService } from '../../services/locationService';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Alert, ActivityIndicator, Modal, Image as RNImage } from 'react-native';
+import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
+import { Menu, User, Power, MapPin, Navigation, ShieldCheck, Gift, ChevronRight, X } from 'lucide-react-native';
+import { useAuthStore } from '../../store/useAuthStore';
+import { useNavigation } from '@react-navigation/native';
 import api from '../../services/api';
-import { MAPBOX_STYLE_URL } from '../../config';
-import { Colors, Spacing, FontSizes } from '../../theme';
-import { useAuthStore } from '../../store/authStore';
-import RideRequestModal from '../../components/RideRequestModal';
-import ReactNativeHapticFeedback from "react-native-haptic-feedback";
-import { socketService } from '../../services/socketService';
-import { API_BASE_URL } from '../../config/api';
+import driverApiService from '../../services/driverApiService';
+import socketService from '../../services/socket';
+import NewRequestOverlay from '../../components/NewRequestOverlay';
+import RideMap from '../../components/RideMap';
+import ActiveRidePhaseCard from '../../components/ActiveRidePhaseCard';
+import RideInfoCard from '../../components/RideInfoCard';
+import StatusHeader from '../../components/StatusHeader';
+import OnlineToggleButton from '../../components/OnlineToggleButton';
+import SidebarMenu from '../../components/SidebarMenu';
+import PremiumModal from '../../components/PremiumModal';
+import PremiumAlert from '../../components/PremiumAlert';
+import { colors } from '../../theme/colors';
+import { spacing } from '../../theme/spacing';
 
-import { soundService } from '../../services/soundService';
+const GOOGLE_MAPS_APIKEY = "AIzaSyCTC78aB0ukv5ERXLwBM_tyiFIy13697wc";
 
-const hapticOptions = {
-    enableVibrateFallback: true,
-    ignoreAndroidSystemSettings: false,
-};
-
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { TrendingUp } from 'lucide-react-native';
+const CANCELLATION_REASONS = [
+    'Customer not found',
+    'Wrong address',
+    'Car trouble',
+    'Too far away',
+    'Personal emergency',
+    'Other',
+];
 
 const HomeScreen = () => {
-    const navigation = useNavigation<any>();
-    const { user, logout } = useAuthStore();
+    const navigation = useNavigation();
+    const [location, setLocation] = useState<Location.LocationObject | null>(null);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [isOnline, setIsOnline] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [locationPermission, setLocationPermission] = useState(false);
+    const [currentRequest, setCurrentRequest] = useState<any>(null);
+    const [activeRide, setActiveRide] = useState<any>(null);
+    const [distanceToPickup, setDistanceToPickup] = useState<number | null>(null);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [isCanceling, setIsCanceling] = useState(false);
+    const [showArrivalConfirmModal, setShowArrivalConfirmModal] = useState(false);
+    const [isConfirmingArrival, setIsConfirmingArrival] = useState(false);
+    const [todayEarnings, setTodayEarnings] = useState<number>(0);
+    const [showSidebar, setShowSidebar] = useState(false);
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        buttons?: { text: string; onPress?: () => void; style?: 'default' | 'cancel' | 'destructive' }[];
+    }>({ visible: false, title: '', message: '' });
+    const mapRef = useRef<MapView>(null);
+    const hasCentered = useRef(false);
 
-    // Ride Request State
-    const [showRideModal, setShowRideModal] = useState(false);
-    const [incomingRide, setIncomingRide] = useState<any>(null);
-    const [todayEarnings, setTodayEarnings] = useState(0);
+    const user = useAuthStore((state) => state.user);
+    const logout = useAuthStore((state) => state.logout);
 
-    useFocusEffect(
-        React.useCallback(() => {
-            fetchSummary();
-        }, [])
-    );
-
-    const fetchSummary = async () => {
+    const fetchTodayEarnings = async () => {
         try {
-            console.log('Fetching summary from:', `${api.defaults.baseURL}/driver/payout/daily-history`);
-            const response = await api.get('/driver/payout/daily-history');
+            const response = await driverApiService.getDailyPayout();
             if (response.data.success) {
-                setTodayEarnings(response.data.summary.totalDriverShare);
+                setTodayEarnings(response.data.summary.totalDriverShare || 0);
             }
         } catch (error) {
-            console.error('Fetch summary error:', error);
+            console.error('Failed to fetch today earnings:', error);
+        }
+    };
+
+    const fetchActiveRide = async () => {
+        try {
+            const response = await driverApiService.getActiveRide();
+            if (response.data.success && response.data.ride) {
+                console.log('🚕 [Driver] Found active ride on mount:', response.data.ride.rideId);
+                setActiveRide(response.data.ride);
+            }
+        } catch (error) {
+            console.log('🚕 [Driver] No active ride found on mount');
         }
     };
 
     useEffect(() => {
-        requestPermission();
+        if (user) {
+            fetchTodayEarnings();
+            if (isOnline) {
+                fetchActiveRide();
+            }
+        }
+    }, [user, isOnline]);
 
-        // Load sounds - Uncomment once alert.mp3 is added to src/assets/sounds/
-        // soundService.loadSound('alert', require('../../assets/sounds/alert.mp3'));
+    useEffect(() => {
+        let locationWatcher: Location.LocationSubscription;
 
-        // Listen for new ride requests
-        socketService.on('new-ride-request', (data) => {
-            console.log('New ride request received:', data);
-            setIncomingRide({
-                rideId: data.rideId,
-                pickup: data.pickup,
-                dropoff: data.dropoff,
-                fare: data.fare,
-                distance: '2.4 km', // Backend should ideally provide this
-                estimateTime: '8 min', // Backend should ideally provide this
-                customerName: data.customerName || 'Customer'
+        (async () => {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                return;
+            }
+
+            locationWatcher = await Location.watchPositionAsync(
+                {
+                    accuracy: Location.Accuracy.BestForNavigation,
+                    distanceInterval: 2,
+                    timeInterval: 1000
+                },
+                (newLocation) => {
+                    setLocation(newLocation);
+                    if (isOnline) {
+                        socketService.emit('update-location', {
+                            lat: newLocation.coords.latitude,
+                            lng: newLocation.coords.longitude,
+                            heading: newLocation.coords.heading,
+                            speed: newLocation.coords.speed
+                        });
+                    }
+
+                    if (activeRide && activeRide.status === 'accepted') {
+                        checkProximity(newLocation, activeRide.pickup);
+                    }
+                }
+            );
+        })();
+
+        return () => locationWatcher?.remove();
+    }, [isOnline, activeRide]);
+
+    useEffect(() => {
+        if (location && !hasCentered.current && mapRef.current) {
+            mapRef.current.animateToRegion({
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+            }, 1000);
+            hasCentered.current = true;
+        }
+    }, [location]);
+
+    useEffect(() => {
+        if (isOnline && user) {
+            socketService.connect(user.uid, 'driver', location ? {
+                lat: location.coords.latitude,
+                lng: location.coords.longitude,
+                heading: location.coords.heading
+            } : undefined);
+
+            if (location) {
+                setTimeout(() => {
+                    socketService.emit('update-location', {
+                        lat: location.coords.latitude,
+                        lng: location.coords.longitude,
+                        heading: location.coords.heading || 0,
+                        speed: location.coords.speed || 0
+                    });
+                }, 1000);
+            }
+
+            socketService.on('new-ride-request', (data) => {
+                console.log('📬 [Driver] New Ride Request RECEIVED:', JSON.stringify(data));
+                setCurrentRequest(data);
             });
-            setShowRideModal(true);
 
-            ReactNativeHapticFeedback.trigger("notificationSuccess", hapticOptions);
-            soundService.play('alert');
-        });
+            socketService.on('ride-cancelled', (data) => {
+                const isCustomer = data?.cancelledBy === 'customer';
+                const title = isCustomer ? 'Ride Cancelled' : 'Ride Cancelled (You)';
+                const message = isCustomer
+                    ? 'The customer has cancelled the ride request.'
+                    : 'You have successfully cancelled this ride.';
+
+                setAlertConfig({
+                    visible: true,
+                    title,
+                    message,
+                    buttons: [{ text: 'OK', onPress: () => setAlertConfig(prev => ({ ...prev, visible: false })) }]
+                });
+                setActiveRide(null);
+                setCurrentRequest(null);
+            });
+        } else {
+            socketService.disconnect();
+        }
 
         return () => {
-            locationService.stopTracking();
             socketService.off('new-ride-request');
-            soundService.releaseAll();
+            socketService.off('ride-cancelled');
         };
-    }, []);
+    }, [isOnline, user]);
 
-    const requestPermission = async () => {
-        const granted = await locationService.requestLocationPermission();
-        setLocationPermission(granted);
+    const checkProximity = (currentLoc: Location.LocationObject, targetLoc: { lat: number, lng: number }) => {
+        const dist = getDistance(
+            currentLoc.coords.latitude,
+            currentLoc.coords.longitude,
+            targetLoc.lat,
+            targetLoc.lng
+        );
+        setDistanceToPickup(dist);
     };
 
-    const handleAcceptRide = async () => {
-        if (!incomingRide) return;
+    const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371e3; // meters
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δφ = (lat2 - lat1) * Math.PI / 180;
+        const Δλ = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    };
 
-        try {
-            setLoading(true);
-            const response = await api.post('/driver/ride/accept', {
-                rideId: incomingRide.rideId
-            });
-
-            if (response.data.success) {
-                setLoading(false); // Clear loading first to allow modal to dismiss
-                setShowRideModal(false);
-                setIncomingRide(null);
-                ReactNativeHapticFeedback.trigger("impactHeavy", hapticOptions);
-
-                // Navigate to active ride screen
-                navigation.navigate('ActiveRide', {
-                    rideData: incomingRide
-                });
-            }
-        } catch (error: any) {
-            console.error('Accept ride error:', error);
-            setLoading(false); // Ensure loading is cleared on error too
-            Alert.alert('Failed', error.response?.data?.message || 'Could not accept ride');
+    const toggleOnlineStatus = async () => {
+        if (!user || user.registrationStatus !== 'approved') {
+            Alert.alert('Activation Required', 'Your account must be approved before you can go online.');
+            return;
         }
-    };
 
-    const handleDeclineRide = () => {
-        setShowRideModal(false);
-        setIncomingRide(null);
-        ReactNativeHapticFeedback.trigger("impactLight", hapticOptions);
-    };
-
-    const toggleOnline = async () => {
+        setLoading(true);
         try {
-            setLoading(true);
-            if (!isOnline) {
-                // Get current location for the initial "online" request
-                const location = await locationService.getCurrentLocation();
-                if (!location) throw new Error('Could not get initial location');
-
-                const response = await api.post('/driver/ride/status/online', {
+            if (isOnline) {
+                await driverApiService.goOffline();
+                setIsOnline(false);
+            } else {
+                if (!location) {
+                    Alert.alert('Location Required', 'Please wait for your location to be determined.');
+                    return;
+                }
+                const response = await driverApiService.goOnline({
                     location: {
                         lat: location.coords.latitude,
                         lng: location.coords.longitude
-                    },
-                    selectedCategory: 'standard' // Default for now
+                    }
                 });
+                setIsOnline(true);
 
-                if (response.data.success) {
-                    await locationService.startTracking();
-                    setIsOnline(true);
-                    ReactNativeHapticFeedback.trigger("impactMedium", hapticOptions);
-                }
-            } else {
-                const response = await api.post('/driver/ride/status/offline');
-                if (response.data.success) {
-                    locationService.stopTracking();
-                    setIsOnline(false);
-                    ReactNativeHapticFeedback.trigger("impactMedium", hapticOptions);
+                // Handle discovery of existing requests
+                if (response.data.pendingRequest) {
+                    setCurrentRequest(response.data.pendingRequest);
                 }
             }
         } catch (error: any) {
-            console.error('Toggle online error:', error);
             Alert.alert('Error', error.response?.data?.message || 'Failed to update status');
         } finally {
             setLoading(false);
         }
     };
 
+    const handleAcceptRide = async (rideId: string) => {
+        try {
+            const response = await driverApiService.acceptRide(rideId);
+            if (response.data.success) {
+                const rideData = response.data.ride || response.data.data;
+                if (rideData) {
+                    Alert.alert('Debug: Accepted', `Ride ${rideId.substring(0, 5)} is now active!`);
+                    setActiveRide(rideData);
+                    setCurrentRequest(null);
+                }
+            } else {
+                Alert.alert('Error', response.data.message || 'Failed to accept ride');
+                setCurrentRequest(null);
+            }
+        } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.message || 'Failed to accept ride');
+            setCurrentRequest(null);
+        }
+    };
+
+    const handleArrived = async () => {
+        const id = activeRide?.rideId || activeRide?.id || activeRide?._id;
+        console.log('🏁 [DIAGNOSTIC] handleArrived request | ID:', id, 'Status: arrived');
+        if (!id) {
+            Alert.alert('Error', 'INTERNAL ERROR: Ride ID is missing. Please restart the app.');
+            return;
+        }
+
+        try {
+            setIsConfirmingArrival(true);
+            const response = await driverApiService.updateStatus({
+                rideId: id,
+                status: 'arrived'
+            });
+            if (response.data.success) {
+                Alert.alert('Debug: Arrived', 'Wait for Customer button should now show.');
+                setActiveRide({ ...activeRide, status: 'arrived' });
+                setShowArrivalConfirmModal(false);
+            }
+        } catch (error: any) {
+            console.error('🔴 Arrived Status Update ERROR:', error.response?.data || error.message);
+            Alert.alert('Error', 'Failed to update status: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setIsConfirmingArrival(false);
+        }
+    };
+
+    const handleStartRide = async () => {
+        const id = activeRide?.rideId || activeRide?.id || activeRide?._id;
+        console.log('🏁 [DIAGNOSTIC] handleStartRide request | ID:', id, 'Status: in_progress');
+        if (!id) {
+            Alert.alert('Error', 'INTERNAL ERROR: Ride ID is missing. Please restart the app.');
+            return;
+        }
+
+        try {
+            const response = await driverApiService.startRide(id);
+            if (response.data.success) {
+                Alert.alert('Debug: Started', 'Trip In Progress UI should now show.');
+                setActiveRide({ ...activeRide, status: 'in_progress' });
+            }
+        } catch (error: any) {
+            console.error('🔴 Start Ride ERROR:', error.response?.data || error.message);
+            Alert.alert('Error', 'Failed to start ride');
+        }
+    };
+
+    const handleCompleteRide = async () => {
+        const id = activeRide?.rideId || activeRide?.id || activeRide?._id;
+        console.log('🏁 [DIAGNOSTIC] handleCompleteRide request | ID:', id, 'Status: completed');
+        if (!id) {
+            Alert.alert('Error', 'INTERNAL ERROR: Ride ID is missing.');
+            return;
+        }
+
+        try {
+            const response = await driverApiService.completeRide({
+                rideId: id,
+                actualDistanceKm: activeRide.distanceKm || 5.2,
+                actualDurationMin: activeRide.durationMin || 12
+            });
+            if (response.data.success) {
+                const completedRide = response.data.ride || response.data.data;
+                setActiveRide({ ...completedRide, status: 'completed', rideId: id });
+                fetchTodayEarnings();
+            }
+        } catch (error: any) {
+            console.error('🔴 Complete Ride ERROR:', error.response?.data || error.message);
+            Alert.alert('Error', 'Failed to complete ride');
+        }
+    };
+
+    const handleConfirmPayment = async () => {
+        const id = activeRide?.rideId || activeRide?.id || activeRide?._id;
+        console.log('🏁 [DIAGNOSTIC] handleConfirmPayment request | ID:', id, 'Status: paid');
+        if (!id) {
+            Alert.alert('Error', 'INTERNAL ERROR: Ride ID is missing.');
+            return;
+        }
+
+        try {
+            const response = await driverApiService.confirmPayment(id);
+            if (response.data.success) {
+                Alert.alert('Success', 'Payment confirmed.');
+                setActiveRide(null);
+            }
+        } catch (error: any) {
+            console.error('🔴 Confirm Payment ERROR:', error.response?.data || error.message);
+            Alert.alert('Error', 'Failed to confirm payment');
+        }
+    };
+
+    const handleCancelRide = async (reason: string) => {
+        setIsCanceling(true);
+        try {
+            const response = await driverApiService.cancelRide(activeRide.rideId || activeRide.id, reason);
+            if (response.data.success) {
+                setActiveRide(null);
+                setShowCancelModal(false);
+            }
+        } catch (error: any) {
+            Alert.alert('Error', 'Failed to cancel ride');
+        } finally {
+            setIsCanceling(false);
+        }
+    };
+
+
+
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" />
-
-            <Mapbox.MapView
-                style={styles.map}
-                styleURL={MAPBOX_STYLE_URL}
-                logoEnabled={false}
-            >
-                <Mapbox.Camera
-                    zoomLevel={16}
-                    followZoomLevel={16}
-                    centerCoordinate={[36.8172, -1.2864]} // Default to Nairobi center
-                    followUserLocation
-                    followUserMode={Mapbox.UserTrackingMode.Follow}
-                />
-                <Mapbox.UserLocation animated={false} />
-            </Mapbox.MapView>
-
-            <View style={styles.topOverlay}>
-                <View style={styles.header}>
-                    <TouchableOpacity
-                        style={[styles.profileButton, { borderColor: isOnline ? Colors.primary : Colors.border }]}
-                        onPress={() => {
-                            // Open side drawer
-                            (navigation as any).openDrawer();
-                        }}
-                        onLongPress={() => {
-                            // Debug Trigger for mock ride
-                            Alert.alert(
-                                "Debug Mode",
-                                "Simulate a new ride request?",
-                                [
-                                    { text: "Cancel", style: "cancel" },
-                                    {
-                                        text: "Simulate",
-                                        onPress: async () => {
-                                            try {
-                                                await api.post('/test/mock-ride', { driverId: user?.uid });
-                                            } catch (err) {
-                                                console.error('Failed to trigger mock ride:', err);
-                                            }
-                                        }
-                                    }
-                                ]
-                            );
-                        }}
-                    >
-                        <Text style={styles.profileInitial}>{user?.name?.charAt(0) || 'D'}</Text>
-                    </TouchableOpacity>
-                    <View style={styles.statusBadge}>
-                        <View style={[styles.statusDot, { backgroundColor: isOnline ? Colors.success : Colors.error }]} />
-                        <Text style={styles.statusText}>{loading ? 'Updating...' : (isOnline ? 'Online' : 'Offline')}</Text>
-                    </View>
-                </View>
-
-                {/* Earnings Summary Card */}
-                <TouchableOpacity
-                    style={styles.earningsCard}
-                    onPress={() => navigation.navigate('Earnings')}
-                >
-                    <View style={styles.earningsIconContainer}>
-                        <TrendingUp size={20} color={Colors.white} />
-                    </View>
-                    <View>
-                        <Text style={styles.earningsLabel}>TODAY'S EARNINGS</Text>
-                        <Text style={styles.earningsValue}>KES {todayEarnings}</Text>
-                    </View>
-                </TouchableOpacity>
-            </View>
-
-            <View style={styles.bottomOverlay}>
-                {!isOnline ? (
-                    <TouchableOpacity
-                        style={[styles.onlineButton, loading && styles.buttonDisabled]}
-                        onPress={toggleOnline}
-                        disabled={loading}
-                    >
-                        <Text style={styles.onlineButtonText}>GO ONLINE</Text>
-                    </TouchableOpacity>
-                ) : (
-                    <TouchableOpacity
-                        style={[styles.onlineButton, styles.offlineButton, loading && styles.buttonDisabled]}
-                        onPress={toggleOnline}
-                        disabled={loading}
-                    >
-                        <Text style={styles.onlineButtonText}>GO OFFLINE</Text>
-                    </TouchableOpacity>
-                )}
-            </View>
-
-            <RideRequestModal
-                visible={showRideModal}
-                rideData={incomingRide}
-                loading={loading}
-                onAccept={handleAcceptRide}
-                onDecline={handleDeclineRide}
+            <RideMap
+                ref={mapRef}
+                location={location}
+                activeRide={activeRide}
+                initialRegion={{
+                    latitude: location?.coords.latitude || -1.2864,
+                    longitude: location?.coords.longitude || 36.8172,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                }}
+                googleMapsApiKey={GOOGLE_MAPS_APIKEY}
             />
 
-            {!locationPermission && (
-                <View style={styles.permissionOverlay}>
-                    <Text style={styles.permissionText}>Location permission is required to work.</Text>
-                    <TouchableOpacity style={styles.smallButton} onPress={requestPermission}>
-                        <Text style={styles.smallButtonText}>Grant Permission</Text>
-                    </TouchableOpacity>
+            <SafeAreaView style={styles.overlay}>
+                <StatusHeader
+                    isOnline={isOnline}
+                    statusText={activeRide ? `STATUS: ${activeRide.status.toUpperCase()}` : (isOnline ? 'Online' : 'Offline')}
+                    onMenuPress={() => setShowSidebar(true)}
+                />
+
+                <View style={styles.bottomContainer}>
+                    <View style={styles.infoCard}>
+                        <ActiveRidePhaseCard
+                            status={activeRide?.status}
+                            onArrived={handleArrived}
+                            onStartRide={handleStartRide}
+                            onCompleteRide={handleCompleteRide}
+                            onConfirmPayment={handleConfirmPayment}
+                        />
+
+                        <RideInfoCard
+                            activeRide={activeRide}
+                            user={user}
+                            todayEarnings={todayEarnings}
+                            onShowCancelModal={() => setShowCancelModal(true)}
+                            onCallCustomer={() => Alert.alert('Call', 'Coming soon')}
+                            onNavigateToEarnings={() => (navigation as any).navigate('Earnings')}
+                            onNavigateToReferral={() => (navigation as any).navigate('Referral')}
+                        />
+                    </View>
+
+                    {!activeRide && (
+                        <OnlineToggleButton
+                            isOnline={isOnline}
+                            onPress={toggleOnlineStatus}
+                            loading={loading}
+                        />
+                    )}
                 </View>
-            )}
+            </SafeAreaView>
+
+            <NewRequestOverlay
+                request={currentRequest}
+                onAccept={handleAcceptRide}
+                onReject={() => setCurrentRequest(null)}
+            />
+
+            <PremiumModal
+                visible={showCancelModal}
+                onClose={() => setShowCancelModal(false)}
+                title="Cancel Ride?"
+                heightPercentage={0.6}
+            >
+                <View style={styles.reasonsList}>
+                    {CANCELLATION_REASONS.map((reason) => (
+                        <TouchableOpacity
+                            key={reason}
+                            style={styles.reasonItem}
+                            onPress={() => handleCancelRide(reason)}
+                        >
+                            <Text style={styles.reasonText}>{reason}</Text>
+                            <ChevronRight size={18} color={colors.textTertiary} />
+                        </TouchableOpacity>
+                    ))}
+                </View>
+                <TouchableOpacity style={styles.closeBtn} onPress={() => setShowCancelModal(false)}>
+                    <Text style={styles.closeBtnText}>Keep Ride</Text>
+                </TouchableOpacity>
+            </PremiumModal>
+
+            <PremiumAlert
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                buttons={alertConfig.buttons}
+            />
+
+            <SidebarMenu
+                visible={showSidebar}
+                user={user}
+                onClose={() => setShowSidebar(false)}
+                onLogout={logout}
+                onDashboardPress={() => setShowSidebar(false)}
+                onHistoryPress={() => (navigation as any).navigate('History')}
+                onEarningsPress={() => (navigation as any).navigate('Earnings')}
+                onReferralPress={() => (navigation as any).navigate('Referral')}
+                onAccountPress={() => (navigation as any).navigate('Account')}
+                onHelpPress={() => (navigation as any).navigate('Help')}
+            />
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.background,
-    },
-    map: {
-        flex: 1,
-    },
-    topOverlay: {
-        position: 'absolute',
-        top: 60,
-        left: 20,
-        right: 20,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    profileButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: Colors.backgroundLighter,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: Colors.border,
-    },
-    profileInitial: {
-        color: Colors.white,
-        fontWeight: 'bold',
-        fontSize: 18,
-    },
-    statusBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: Colors.backgroundOverlay,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-    },
-    statusDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        marginRight: 8,
-    },
-    statusText: {
-        color: Colors.white,
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    earningsCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: Colors.backgroundOverlay,
-        borderRadius: 20,
-        padding: Spacing.sm,
-        marginTop: Spacing.md,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-    },
-    earningsIconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: Colors.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    earningsLabel: {
-        color: Colors.textSecondary,
-        fontSize: 10,
-        fontWeight: '700',
-    },
-    earningsValue: {
-        color: Colors.white,
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    bottomOverlay: {
-        position: 'absolute',
-        bottom: 50,
-        left: 0,
-        right: 0,
-        paddingHorizontal: 30,
-        alignItems: 'center',
-    },
-    onlineButton: {
-        backgroundColor: Colors.primary,
-        width: '100%',
-        paddingVertical: 18,
-        borderRadius: 35,
-        alignItems: 'center',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4.65,
-        elevation: 8,
-    },
-    offlineButton: {
-        backgroundColor: Colors.error,
-    },
-    buttonDisabled: {
-        opacity: 0.6,
-    },
-    onlineButtonText: {
-        color: Colors.white,
-        fontSize: 20,
-        fontWeight: 'bold',
-        letterSpacing: 1.5,
-    },
-    permissionOverlay: {
-        position: 'absolute',
-        top: '40%',
-        left: 30,
-        right: 30,
-        backgroundColor: Colors.backgroundOverlay,
-        padding: 20,
-        borderRadius: 15,
-        alignItems: 'center',
-    },
-    permissionText: {
-        color: Colors.white,
-        textAlign: 'center',
-        marginBottom: 15,
-    },
-    smallButton: {
-        backgroundColor: Colors.primary,
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 20,
-    },
-    smallButtonText: {
-        color: Colors.white,
-        fontWeight: 'bold',
-    },
+    container: { flex: 1 },
+    overlay: { flex: 1, justifyContent: 'space-between', padding: 16 },
+    bottomContainer: { paddingBottom: 20 },
+    infoCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 16, elevation: 6 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContentSmall: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
+    modalTitle: { fontSize: 20, fontWeight: '800', marginBottom: 20 },
+    reasonsList: { marginBottom: 20 },
+    reasonItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F2F2F7' },
+    reasonText: { fontSize: 16, fontWeight: '600' },
+    closeBtn: { padding: 16, borderRadius: 16, backgroundColor: '#F2F2F7', alignItems: 'center' },
+    closeBtnText: { fontSize: 16, fontWeight: '700' },
 });
 
 export default HomeScreen;

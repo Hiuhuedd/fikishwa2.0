@@ -75,9 +75,15 @@ const StatCard: React.FC<StatCardProps> = ({
 const styles = StyleSheet.create({
     container: {
         backgroundColor: Colors.surface,
-        borderRadius: BorderRadius.lg,
-        padding: Spacing.md,
-        ...Shadows.sm,
+        borderRadius: BorderRadius.xl,
+        padding: Spacing.lg,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 8,
     },
     header: {
         flexDirection: 'row',
@@ -95,10 +101,11 @@ const styles = StyleSheet.create({
         fontWeight: FontWeights.medium,
     },
     value: {
-        fontSize: FontSizes.xxl,
-        fontWeight: FontWeights.bold,
+        fontSize: 32,
+        fontWeight: '800',
         color: Colors.textPrimary,
         marginBottom: Spacing.xs,
+        letterSpacing: -1,
     },
     subtitle: {
         fontSize: FontSizes.xs,

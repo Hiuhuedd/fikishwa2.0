@@ -20,6 +20,7 @@ import {
     rejectDriver,
     toggleDriverStatus,
     updateDriverCategory,
+    verifyDocument,
     Driver
 } from '../../services/driverService';
 import { getAllCategories, VehicleCategory } from '../../services/categoryService';
@@ -148,6 +149,45 @@ const DriverDetailsScreen: React.FC = () => {
         }
     };
 
+    const [imageModalVisible, setImageModalVisible] = useState(false);
+    const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+    const [selectedDocLabel, setSelectedDocLabel] = useState<string>('');
+    const [imageLoading, setImageLoading] = useState(false);
+    const [imageError, setImageError] = useState(false);
+    const [verifiedDocs, setVerifiedDocs] = useState<Record<string, boolean>>({});
+
+    const handleDocumentAction = async (action: 'verify' | 'flag') => {
+        if (!driver || !driverId) return;
+
+        try {
+            setActionLoading(true);
+            const status = action === 'verify' ? 'approved' : 'rejected';
+            const reason = action === 'flag' ? `Issue with ${selectedDocLabel}` : undefined;
+
+            const response = await verifyDocument(
+                driverId,
+                selectedDocLabel, // using label as key, normally you'd use a strict key like 'idFront'
+                status,
+                reason,
+                selectedDocLabel
+            );
+
+            if (response.success) {
+                // Update local state for immediate feedback
+                setVerifiedDocs(prev => ({ ...prev, [selectedDocLabel]: action === 'verify' }));
+                setImageModalVisible(false);
+                Alert.alert('Success', `${selectedDocLabel} marked as ${status}.`);
+                fetchDetails(); // Refresh full driver object to get new docStatuses
+            } else {
+                Alert.alert('Error', response.message || `Failed to mark ${selectedDocLabel}`);
+            }
+        } catch (error: any) {
+            Alert.alert('Error', error.message || `Failed to update document status`);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     const handleToggleStatus = async () => {
         if (!driver) return;
 
@@ -200,8 +240,11 @@ const DriverDetailsScreen: React.FC = () => {
         );
     }
 
-    const isPending = driver.registrationStatus === 'pending' || driver.status === 'pending';
-    const isApproved = driver.registrationStatus === 'approved' || driver.status === 'approved';
+    const isPending = (driver.registrationStatus || driver.status || '').toLowerCase() === 'pending';
+    const isApproved = (driver.registrationStatus || driver.status || '').toLowerCase() === 'approved';
+    const isRejected = (driver.registrationStatus || driver.status || '').toLowerCase() === 'rejected';
+
+    const showVerificationActions = isPending || isRejected;
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -250,11 +293,7 @@ const DriverDetailsScreen: React.FC = () => {
                     </View>
                     <View style={styles.infoRow}>
                         <Text style={styles.label}>Plate:</Text>
-                        <Text style={styles.value}>{driver.vehicleRegNo}</Text>
-                    </View>
-                    <View style={styles.infoRow}>
-                        <Text style={styles.label}>Plate:</Text>
-                        <Text style={styles.value}>{driver.vehicleRegNo}</Text>
+                        <Text style={styles.value}>{driver.plateNumber || driver.vehicleRegNo || 'Not Assigned'}</Text>
                     </View>
                     <View style={styles.infoRow}>
                         <Text style={styles.label}>Category:</Text>
@@ -269,37 +308,104 @@ const DriverDetailsScreen: React.FC = () => {
 
                 {/* Documents */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Documents</Text>
-                    {/* Create a reusable document viewer component later, for now just list links or buttons */}
-                    <DocumentItem label="ID Front" url={driver.idFrontUrl} />
-                    <DocumentItem label="ID Back" url={driver.idBackUrl} />
-                    <DocumentItem label="Driving License" url={driver.licenseUrl} />
-                    <DocumentItem label="Good Conduct" url={driver.goodConductUrl} />
-                    <DocumentItem label="Car Photo" url={driver.carImageUrl} />
-                    <DocumentItem label="Logbook" url={driver.carRegistrationUrl} />
+                    <Text style={styles.sectionTitle}>Compliance Documents</Text>
+                    <DocumentItem
+                        label="ID Front"
+                        docKey="ID Front"
+                        url={driver.idFrontUrl}
+                        statusObj={driver.docStatuses?.['ID Front']}
+                        onPress={(url) => {
+                            setSelectedDocLabel('ID Front');
+                            setSelectedImageUrl(url);
+                            setImageLoading(true);
+                            setImageError(false);
+                            setImageModalVisible(true);
+                        }}
+                    />
+                    <DocumentItem
+                        label="ID Back"
+                        docKey="ID Back"
+                        url={driver.idBackUrl}
+                        statusObj={driver.docStatuses?.['ID Back']}
+                        onPress={(url) => {
+                            setSelectedDocLabel('ID Back');
+                            setSelectedImageUrl(url);
+                            setImageLoading(true);
+                            setImageError(false);
+                            setImageModalVisible(true);
+                        }}
+                    />
+                    <DocumentItem
+                        label="Driving License"
+                        docKey="Driving License"
+                        url={driver.licenseUrl}
+                        statusObj={driver.docStatuses?.['Driving License']}
+                        onPress={(url) => {
+                            setSelectedDocLabel('Driving License');
+                            setSelectedImageUrl(url);
+                            setImageLoading(true);
+                            setImageError(false);
+                            setImageModalVisible(true);
+                        }}
+                    />
+                    <DocumentItem
+                        label="Good Conduct"
+                        docKey="Good Conduct"
+                        url={driver.goodConductUrl}
+                        statusObj={driver.docStatuses?.['Good Conduct']}
+                        onPress={(url) => {
+                            setSelectedDocLabel('Good Conduct');
+                            setSelectedImageUrl(url);
+                            setImageLoading(true);
+                            setImageError(false);
+                            setImageModalVisible(true);
+                        }}
+                    />
+                    <DocumentItem
+                        label="Car Photo"
+                        docKey="Car Photo"
+                        url={driver.carImageUrl}
+                        statusObj={driver.docStatuses?.['Car Photo']}
+                        onPress={(url) => {
+                            setSelectedDocLabel('Car Photo');
+                            setSelectedImageUrl(url);
+                            setImageLoading(true);
+                            setImageError(false);
+                            setImageModalVisible(true);
+                        }}
+                    />
+                    <DocumentItem
+                        label="Logbook"
+                        docKey="Logbook"
+                        url={driver.carRegistrationUrl}
+                        statusObj={driver.docStatuses?.['Logbook']}
+                        onPress={(url) => {
+                            setSelectedDocLabel('Logbook');
+                            setSelectedImageUrl(url);
+                            setImageLoading(true);
+                            setImageError(false); // Reset error state
+                            setImageModalVisible(true);
+                        }}
+                    />
                 </View>
 
                 {/* Action Buttons */}
                 <View style={styles.actions}>
-                    {isPending && (
-                        <>
-                            <TouchableOpacity
-                                style={[styles.button, styles.approveButton]}
-                                onPress={handleApprove}
-                                disabled={actionLoading}
-                            >
-                                <Text style={styles.buttonText}>Approve Driver</Text>
-                            </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.button, styles.approveButton]}
+                        onPress={handleApprove}
+                        disabled={actionLoading}
+                    >
+                        <Text style={styles.buttonText}>Approve Driver</Text>
+                    </TouchableOpacity>
 
-                            <TouchableOpacity
-                                style={[styles.button, styles.rejectButton]}
-                                onPress={() => setRejectModalVisible(true)}
-                                disabled={actionLoading}
-                            >
-                                <Text style={styles.buttonText}>Reject Driver</Text>
-                            </TouchableOpacity>
-                        </>
-                    )}
+                    <TouchableOpacity
+                        style={[styles.button, styles.rejectButton]}
+                        onPress={() => setRejectModalVisible(true)}
+                        disabled={actionLoading}
+                    >
+                        <Text style={styles.buttonText}>Reject Driver</Text>
+                    </TouchableOpacity>
 
                     {isApproved && (
                         <TouchableOpacity
@@ -410,25 +516,132 @@ const DriverDetailsScreen: React.FC = () => {
                     </View>
                 </View>
             </Modal>
+
+            {/* Image Viewer Modal */}
+            <Modal
+                visible={imageModalVisible}
+                transparent
+                animationType="fade"
+                statusBarTranslucent
+                onRequestClose={() => setImageModalVisible(false)}
+            >
+                <SafeAreaView style={styles.imageModalOverlay} edges={['top', 'bottom']}>
+                    <View style={styles.imageModalContainer}>
+                        {/* Glassmorphic Header */}
+                        <View style={styles.imageModalHeader}>
+                            <Text style={styles.imageDocTitle}>{selectedDocLabel}</Text>
+                            <TouchableOpacity
+                                style={styles.closeImageButtonCircle}
+                                onPress={() => setImageModalVisible(false)}
+                            >
+                                <Text style={styles.closeIconSmall}>✕</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.imageModalContent}>
+                            {selectedImageUrl && !imageError ? (
+                                <View style={styles.imageContainerLarge}>
+                                    <Image
+                                        source={{ uri: selectedImageUrl }}
+                                        style={styles.fullImage}
+                                        resizeMode="contain"
+                                        onLoadStart={() => setImageLoading(true)}
+                                        onLoad={() => {
+                                            setImageLoading(false);
+                                            setImageError(false);
+                                        }}
+                                        onLoadEnd={() => setImageLoading(false)}
+                                        onError={() => {
+                                            setImageLoading(false);
+                                            setImageError(true);
+                                        }}
+                                    />
+                                    {imageLoading && (
+                                        <View style={styles.imageLoader}>
+                                            <LoadingSpinner size="large" color={Colors.white} />
+                                        </View>
+                                    )}
+                                </View>
+                            ) : (
+                                <View style={styles.centerContainer}>
+                                    <Text style={styles.errorText}>
+                                        {imageError ? 'Failed to load image. Check URL.' : 'No image available'}
+                                    </Text>
+                                    {imageError && (
+                                        <Text style={styles.urlDebugText}>{selectedImageUrl}</Text>
+                                    )}
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Verification Actions Bar */}
+                        <View style={styles.verificationBar}>
+                            <TouchableOpacity
+                                style={[styles.verifButton, styles.flagButton]}
+                                onPress={() => handleDocumentAction('flag')}
+                            >
+                                <Text style={styles.verifButtonText}>Flag Issue</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.verifButton, styles.verifyDocButton]}
+                                onPress={() => handleDocumentAction('verify')}
+                            >
+                                <Text style={styles.verifButtonText}>✓ Verify</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </SafeAreaView>
+            </Modal>
         </SafeAreaView>
     );
 };
 
-const DocumentItem = ({ label, url }: { label: string; url?: string }) => (
-    <TouchableOpacity
-        style={styles.docItem}
-        disabled={!url}
-        onPress={() => {
-            // TODO: Implement full screen image viewer or browser open
-            Alert.alert('Document', 'Image viewer implementation coming soon');
-        }}
-    >
-        <Text style={styles.docLabel}>{label}</Text>
-        <Text style={[styles.docStatus, { color: url ? Colors.primary : Colors.textMuted }]}>
-            {url ? 'View ›' : 'Missing'}
-        </Text>
-    </TouchableOpacity>
-);
+const DocumentItem = ({
+    label,
+    docKey,
+    url,
+    statusObj,
+    onPress
+}: {
+    label: string;
+    docKey: string;
+    url?: string;
+    statusObj?: { status: string; reason?: string };
+    onPress: (url: string) => void
+}) => {
+    const isVerified = statusObj?.status === 'approved';
+    const isRejected = statusObj?.status === 'rejected';
+
+    return (
+        <View style={styles.docItemContainer}>
+            <TouchableOpacity
+                style={styles.docItem}
+                disabled={!url}
+                onPress={() => url && onPress(url)}
+            >
+                <View style={styles.docLabelRow}>
+                    {isVerified && <Text style={styles.verifiedCheck}>✓ </Text>}
+                    {isRejected && <Text style={styles.rejectedCross}>✕ </Text>}
+                    <Text style={[
+                        styles.docLabel,
+                        isVerified && styles.docLabelVerified,
+                        isRejected && styles.docLabelRejected
+                    ]}>{label}</Text>
+                </View>
+                <View style={styles.docStatusRow}>
+                    {isVerified && <View style={styles.tagVerified}><Text style={styles.tagTextVerified}>Verified</Text></View>}
+                    {isRejected && <View style={styles.tagRejected}><Text style={styles.tagTextRejected}>Rejected</Text></View>}
+                    <Text style={[styles.docStatus, { color: url ? Colors.primary : Colors.textMuted }]}>
+                        {url ? 'View ›' : 'Missing'}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+            {isRejected && statusObj?.reason && (
+                <Text style={styles.rejectionReasonText}>Reason: {statusObj.reason}</Text>
+            )}
+        </View>
+    );
+};
 
 const styles = StyleSheet.create({
     container: {
@@ -527,12 +740,23 @@ const styles = StyleSheet.create({
         color: Colors.textPrimary,
         fontWeight: FontWeights.medium,
     },
+    docItemContainer: {
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border,
+        paddingVertical: Spacing.md,
+    },
     docItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingVertical: Spacing.md,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.border,
+        alignItems: 'center',
+    },
+    docLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    docStatusRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     docLabel: {
         fontSize: FontSizes.md,
@@ -541,6 +765,7 @@ const styles = StyleSheet.create({
     docStatus: {
         fontSize: FontSizes.md,
         fontWeight: FontWeights.medium,
+        marginLeft: Spacing.sm,
     },
     actions: {
         padding: Spacing.lg,
@@ -665,7 +890,141 @@ const styles = StyleSheet.create({
     saveCategoryText: {
         color: Colors.white,
         fontWeight: 'bold',
-    }
+    },
+    imageModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.95)',
+    },
+    imageModalContainer: {
+        flex: 1,
+    },
+    imageModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.xl,
+        paddingVertical: Spacing.md,
+    },
+    imageDocTitle: {
+        color: Colors.white,
+        fontSize: FontSizes.lg,
+        fontWeight: 'bold',
+    },
+    closeImageButtonCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    closeIconSmall: {
+        color: Colors.white,
+        fontSize: 16,
+    },
+    imageModalContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    imageContainerLarge: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    fullImage: {
+        width: '100%',
+        height: '100%',
+    },
+    imageLoader: {
+        position: 'absolute',
+    },
+    verificationBar: {
+        flexDirection: 'row',
+        paddingHorizontal: Spacing.xl,
+        paddingVertical: Spacing.lg,
+        justifyContent: 'space-between',
+        backgroundColor: 'rgba(255,255,255,0.02)',
+    },
+    verifButton: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: BorderRadius.md,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    flagButton: {
+        backgroundColor: 'rgba(255,59,48,0.2)',
+        marginRight: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.error,
+    },
+    verifyDocButton: {
+        backgroundColor: Colors.success,
+    },
+    verifButtonText: {
+        color: Colors.white,
+        fontWeight: 'bold',
+        fontSize: FontSizes.md,
+    },
+    docLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    verifiedCheck: {
+        color: Colors.success,
+        fontWeight: 'bold',
+        fontSize: FontSizes.lg,
+    },
+    rejectedCross: {
+        color: Colors.error,
+        fontWeight: 'bold',
+        fontSize: FontSizes.lg,
+    },
+    docLabelVerified: {
+        color: Colors.textSecondary,
+    },
+    docLabelRejected: {
+        color: Colors.error,
+    },
+    tagVerified: {
+        backgroundColor: Colors.success + '20',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        marginRight: 8,
+    },
+    tagTextVerified: {
+        color: Colors.success,
+        fontSize: FontSizes.xs,
+        fontWeight: 'bold',
+    },
+    tagRejected: {
+        backgroundColor: Colors.error + '20',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        marginRight: 8,
+    },
+    tagTextRejected: {
+        color: Colors.error,
+        fontSize: FontSizes.xs,
+        fontWeight: 'bold',
+    },
+    rejectionReasonText: {
+        color: Colors.error,
+        fontSize: FontSizes.sm,
+        marginTop: 4,
+        fontStyle: 'italic',
+    },
+    urlDebugText: {
+        color: Colors.textMuted,
+        fontSize: FontSizes.xs,
+        marginTop: Spacing.sm,
+        textAlign: 'center',
+        paddingHorizontal: Spacing.xl,
+    },
 });
 
 export default DriverDetailsScreen;

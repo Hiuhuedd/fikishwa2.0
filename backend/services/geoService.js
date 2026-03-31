@@ -1,75 +1,78 @@
-const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
-const mbxDirections = require('@mapbox/mapbox-sdk/services/directions');
+const axios = require('axios');
 
-const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN;
-
-const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
-const directionsClient = mbxDirections({ accessToken: MAPBOX_ACCESS_TOKEN });
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
 /**
- * Forward geocoding: Get coordinates from address query
+ * Forward geocoding: Get coordinates from address query (Google Maps)
  */
 const forwardGeocode = async (query) => {
     try {
-        const response = await geocodingClient.forwardGeocode({
-            query: query,
-            limit: 5,
-            countries: ['ke'] // Focused on Kenya
-        }).send();
+        const response = await axios.get(
+            `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}`
+        );
 
-        return response.body.features.map(feature => ({
-            id: feature.id,
-            address: feature.place_name,
+        if (response.data.status !== 'OK') {
+            return [];
+        }
+
+        return response.data.results.map(result => ({
+            id: result.place_id,
+            address: result.formatted_address,
             coordinates: {
-                lng: feature.center[0],
-                lat: feature.center[1]
+                lng: result.geometry.location.lng,
+                lat: result.geometry.location.lat
             }
         }));
     } catch (error) {
-        console.error('Mapbox Geocoding Error:', error);
+        console.error('Google Maps Geocoding Error:', error);
         throw error;
     }
 };
 
 /**
- * Calculate route with optional waypoints
+ * Calculate route with optional waypoints (Google Maps)
  */
 const getRoute = async (pickup, stops = [], dropoff) => {
     try {
-        // Build waypoints array from pickup, stops, and dropoff
-        const waypoints = [
-            { coordinates: [pickup.lng, pickup.lat] },
-            ...stops.map(stop => ({ coordinates: [stop.lng, stop.lat] })),
-            { coordinates: [dropoff.lng, dropoff.lat] }
-        ];
-
-        const response = await directionsClient.getDirections({
-            profile: 'driving',
-            waypoints: waypoints,
-            geometries: 'polyline',
-            overview: 'full'
-        }).send();
-
-        if (!response.body.routes || response.body.routes.length === 0) {
-            throw new Error('No route found');
+        const origin = `${pickup.lat},${pickup.lng}`;
+        const destination = `${dropoff.lat},${dropoff.lng}`;
+        let waypoints = '';
+        if (stops.length > 0) {
+            waypoints = '&waypoints=' + stops.map(s => `${s.lat},${s.lng}`).join('|');
         }
 
-        const route = response.body.routes[0];
+        const response = await axios.get(
+            `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}${waypoints}&key=${GOOGLE_MAPS_API_KEY}`
+        );
+
+        if (response.data.status !== 'OK') {
+            throw new Error(`Directions API error: ${response.data.status}`);
+        }
+
+        const route = response.data.routes[0];
+        const leg = route.legs[0]; // For simplicity, though multi-leg routes exist
+
+        // Total distance and duration across all legs
+        let totalDistance = 0;
+        let totalDuration = 0;
+        route.legs.forEach(l => {
+            totalDistance += l.distance.value;
+            totalDuration += l.duration.value;
+        });
 
         return {
-            distance: route.distance, // meters
-            duration: route.duration, // seconds
-            geometry: route.geometry, // polyline
-            waypoints: route.legs.map((leg, index) => ({
-                distance: leg.distance,
-                duration: leg.duration,
-                summary: leg.summary,
-                // The directions API might have slightly adjusted coordinates
-                location: waypoints[index].coordinates
+            distance: totalDistance, // meters
+            duration: totalDuration, // seconds
+            geometry: route.overview_polyline.points,
+            waypoints: route.legs.map(l => ({
+                distance: l.distance.value,
+                duration: l.duration.value,
+                summary: route.summary,
+                location: [l.start_location.lng, l.start_location.lat]
             }))
         };
     } catch (error) {
-        console.error('Mapbox Directions Error:', error);
+        console.error('Google Maps Directions Error:', error);
         throw error;
     }
 };

@@ -39,6 +39,12 @@ export interface Driver {
     carModel?: string; // Direct property from details
     carYear?: string; // Direct property from details
     vehicleRegNo?: string;
+    plateNumber?: string;
+    docStatuses?: Record<string, {
+        status: string;
+        reason?: string;
+        updatedAt: string;
+    }>;
 }
 
 export interface DriverListResponse {
@@ -56,6 +62,7 @@ export interface DriverActionResponse {
     success: boolean;
     message: string;
     data?: any;
+    docStatuses?: Record<string, any>;
 }
 
 /**
@@ -133,6 +140,19 @@ export const verifyDriverAction = async (uid: string, status: 'approved' | 'reje
 export const updateDriverCategory = async (driverId: string, categoryId: string): Promise<DriverActionResponse> => {
     const response = await api.post<DriverActionResponse>(`/api/admin/drivers/${driverId}/update-category`, {
         categoryId,
+    });
+    return response.data;
+};
+
+/**
+ * Verify driver document
+ */
+export const verifyDocument = async (driverId: string, docKey: string, status: 'approved' | 'rejected', reason?: string, documentLabel?: string): Promise<DriverActionResponse> => {
+    const response = await api.post<DriverActionResponse>(`/api/admin/drivers/${driverId}/verify-document`, {
+        docKey,
+        status,
+        reason,
+        documentLabel
     });
     return response.data;
 };

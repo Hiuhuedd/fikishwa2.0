@@ -10,7 +10,8 @@ import {
     Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { ArrowLeft } from 'lucide-react-native';
 import { Colors, Spacing, FontSizes, FontWeights, BorderRadius, Shadows } from '../../theme';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { getAllRides, Ride } from '../../services/rideService';
@@ -66,8 +67,8 @@ const RidesScreen: React.FC = () => {
         }
     };
 
-    const openDrawer = () => {
-        navigation.dispatch(DrawerActions.openDrawer());
+    const handleBack = () => {
+        navigation.goBack();
     };
 
     const getStatusColor = (status: string) => {
@@ -140,8 +141,8 @@ const RidesScreen: React.FC = () => {
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={openDrawer} style={styles.menuButton}>
-                    <Text style={styles.menuIcon}>☰</Text>
+                <TouchableOpacity onPress={handleBack} style={styles.menuButton}>
+                    <ArrowLeft size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Rides</Text>
             </View>

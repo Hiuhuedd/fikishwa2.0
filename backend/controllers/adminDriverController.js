@@ -12,6 +12,7 @@ const db = getFirestoreApp();
  * List pending drivers
  */
 exports.getPendingDrivers = async (req, res) => {
+    console.log('📦 Fetching pending drivers...');
     try {
         const driversRef = collection(db, 'drivers');
         const q = query(
@@ -43,7 +44,7 @@ exports.getPendingDrivers = async (req, res) => {
                 }
             });
         });
-
+        console.log(`✅ Returning ${drivers.length} pending drivers. IDs: ${drivers.map(d => d.driverId).join(', ')}`);
         res.json({
             success: true,
             drivers,
@@ -58,6 +59,7 @@ exports.getPendingDrivers = async (req, res) => {
  * List all drivers with filters
  */
 exports.getAllDrivers = async (req, res) => {
+    console.log(`📦 Fetching all drivers (search: ${req.query.search}, status: ${req.query.status})...`);
     try {
         const { status, search } = req.query;
         const driversRef = collection(db, 'drivers');
@@ -99,7 +101,7 @@ exports.getAllDrivers = async (req, res) => {
                 d.phone.includes(search)
             );
         }
-
+        console.log(`✅ Returning ${drivers.length} drivers. IDs: ${drivers.map(d => d.driverId).join(', ')}`);
         res.json({
             success: true,
             drivers
@@ -113,14 +115,18 @@ exports.getAllDrivers = async (req, res) => {
  * Get detailed driver view
  */
 exports.getDriverDetails = async (req, res) => {
+    const { driverId } = req.params;
+    console.log(`🔍 Fetching details for driver: ${driverId}`);
     try {
-        const { driverId } = req.params;
         const driverRef = doc(db, 'drivers', driverId);
         const driverDoc = await getDoc(driverRef);
 
         if (!driverDoc.exists()) {
+            console.log(`⚠️ Driver not found in Firestore: ${driverId}`);
             return res.status(404).json({ success: false, message: 'Driver not found' });
         }
+
+        console.log(`✅ Found driver: ${driverDoc.data().name}`);
 
         res.json({
             success: true,
@@ -321,7 +327,82 @@ exports.updateDriverCategory = async (req, res) => {
 
         res.json({ success: true, message: 'Driver category updated successfully' });
     } catch (error) {
-        console.error('Update Driver Category Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * Verify specific document
+ */
+exports.verifyDocument = async (req, res) => {
+    try {
+        const { driverId } = req.params;
+        const { docKey, status, reason, documentLabel } = req.body;
+        const adminId = req.user.uid;
+
+        if (!docKey || !status) {
+            return res.status(400).json({ success: false, message: 'Document key and status are required' });
+        }
+
+        const driverRef = doc(db, 'drivers', driverId);
+        const logRef = doc(collection(db, 'driverReviewLogs'));
+
+        const result = await runTransaction(db, async (transaction) => {
+            const driverDoc = await transaction.get(driverRef);
+            if (!driverDoc.exists()) throw new Error('Driver not found');
+
+            const data = driverDoc.data();
+            const docStatuses = data.docStatuses || {};
+
+            docStatuses[docKey] = {
+                status,
+                reason: reason || null,
+                updatedAt: new Date().toISOString()
+            };
+
+            const updates = {
+                docStatuses,
+                updatedAt: serverTimestamp()
+            };
+
+            transaction.update(driverRef, updates);
+
+            // Audit log
+            transaction.set(logRef, {
+                driverId,
+                adminId,
+                action: 'verify_document',
+                docKey,
+                status,
+                reason: reason || null,
+                timestamp: serverTimestamp()
+            });
+
+            return {
+                name: data.name,
+                phone: data.phone
+            };
+        });
+
+        // Send SMS Feedback
+        if (status === 'rejected' || status === 'approved') {
+            await smsService.generateDocumentFeedbackSMS(
+                result.name,
+                result.phone,
+                documentLabel || docKey,
+                status,
+                reason
+            );
+        }
+
+        res.json({
+            success: true,
+            message: `Document ${status} successfully`,
+            docStatuses: (await getDoc(driverRef)).data().docStatuses
+        });
+
+    } catch (error) {
+        console.error('Verify Document Error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 };

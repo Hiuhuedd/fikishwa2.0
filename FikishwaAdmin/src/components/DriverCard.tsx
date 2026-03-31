@@ -26,7 +26,7 @@ const DriverCard: React.FC<DriverCardProps> = ({ driver, onPress }) => {
     const carMake = driver.carMake || vehicle.make || 'Unknown Make';
     const carModel = driver.carModel || vehicle.model || 'Unknown Model';
     const carYear = driver.carYear || vehicle.year || '';
-    const plate = driver.vehicleRegNo || '';
+    const plate = driver.plateNumber || driver.vehicleRegNo || '';
 
     const vehicleText = `${driver.vehicleType || 'Vehicle'} • ${carModel} • ${plate || carYear}`;
 

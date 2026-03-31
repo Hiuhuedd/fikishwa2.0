@@ -9,6 +9,7 @@ const sendOtp = async (req, res) => {
         }
 
         const sessionId = await customerAuthService.sendOtp(phone, req.ip);
+        console.log(`🔑 Generated Session ID: ${sessionId} for ${phone}`);
 
         res.status(200).json({
             success: true,
@@ -26,8 +27,10 @@ const sendOtp = async (req, res) => {
 const verifyOtp = async (req, res) => {
     try {
         const { sessionId, otp } = req.body;
+        console.log(`🔍 Verifying OTP for Session ID: ${sessionId}, OTP: ${otp}`);
 
         if (!sessionId || !otp) {
+            console.log('⚠️ Missing Session ID or OTP in request body');
             return res.status(400).json({ success: false, message: 'Session ID and OTP are required' });
         }
 
@@ -51,13 +54,15 @@ const verifyOtp = async (req, res) => {
 
 const updateProfile = async (req, res) => {
     try {
-        const { name, profilePhotoUrl, emergencyContact } = req.body;
+        const { name, profilePhotoUrl, emergencyContact, homeLocation, workLocation } = req.body;
         const uid = req.user.uid; // From authMiddleware
 
         const updatedProfile = await customerAuthService.updateProfile(uid, {
             name,
             profilePhotoUrl,
-            emergencyContact
+            emergencyContact,
+            homeLocation,
+            workLocation
         });
 
         res.status(200).json({

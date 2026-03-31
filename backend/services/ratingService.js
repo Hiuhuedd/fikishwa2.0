@@ -49,10 +49,10 @@ const submitCustomerRating = async (rideId, customerId, stars, comment = '') => 
                 }
             });
 
-            // Calculate new average rating
-            const currentTotal = (driverData.averageRating || 0) * (driverData.totalRatingsCount || 0);
+            // Calculate new totals and average
+            const newTotalStars = (driverData.totalStars || 0) + stars;
             const newCount = (driverData.totalRatingsCount || 0) + 1;
-            const newAverage = (currentTotal + stars) / newCount;
+            const newAverage = newTotalStars / newCount;
 
             // Update driver stats
             const recentRatings = driverData.recentRatings || [];
@@ -67,8 +67,9 @@ const submitCustomerRating = async (rideId, customerId, stars, comment = '') => 
             ].slice(0, 10); // Keep only last 10
 
             transaction.update(driverRef, {
-                averageRating: parseFloat(newAverage.toFixed(2)),
+                totalStars: newTotalStars,
                 totalRatingsCount: newCount,
+                averageRating: parseFloat(newAverage.toFixed(2)),
                 recentRatings: updatedRecentRatings
             });
 

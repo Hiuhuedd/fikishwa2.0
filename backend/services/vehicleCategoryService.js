@@ -59,13 +59,14 @@ class VehicleCategoryService {
      * Get all categories (Admin)
      */
     async getAllCategories() {
-        // Remove orderBy to ensure we fetch categories even if sortOrder is missing
         const q = query(collection(db, 'vehicleCategories'));
         const snapshot = await getDocs(q);
         const categories = [];
-        snapshot.forEach(doc => categories.push(doc.data()));
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            categories.push({ ...data, categoryId: doc.id });
+        });
 
-        // Sort in memory
         return categories.sort((a, b) => (a.sortOrder || 999) - (b.sortOrder || 999));
     }
 
@@ -80,7 +81,10 @@ class VehicleCategoryService {
         );
         const snapshot = await getDocs(q);
         const categories = [];
-        snapshot.forEach(doc => categories.push(doc.data()));
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            categories.push({ ...data, categoryId: doc.id });
+        });
         return categories;
     }
 

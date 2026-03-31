@@ -1,0 +1,40 @@
+# Fikishwa Root Gitignore
+
+# Backups
+*_bak/
+*_copy/
+*.bak
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Expo & Mobile Build Artifacts
+.expo/
+dist/
+web-build/
+android/
+ios/
+
+# Environment
+.env
+.env.local
+.env.development
+.env.production
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# MacOS
+.DS_Store
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+logs/
+*.log

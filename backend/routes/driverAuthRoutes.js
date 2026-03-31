@@ -17,5 +17,7 @@ router.post('/send-otp', otpRateLimiter, driverAuthController.sendOtp);
 router.post('/verify-otp', driverAuthController.verifyOtp);
 router.post('/update-profile', authMiddleware, driverAuthController.updateProfile);
 router.post('/submit-registration', authMiddleware, driverAuthController.submitRegistration);
+router.get('/profile', authMiddleware, driverAuthController.getProfile);
+router.post('/accept-policies', authMiddleware, driverAuthController.acceptPolicies);
 
 module.exports = router;

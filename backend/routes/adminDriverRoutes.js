@@ -8,6 +8,11 @@ const { checkRole } = require('../middleware/roleMiddleware');
 router.use(verifyToken);
 router.use(checkRole('admin'));
 
+router.use((req, res, next) => {
+    console.log(`👤 Entering Driver Router: ${req.method} ${req.url}`);
+    next();
+});
+
 // List endpoints
 router.get('/pending', adminDriverController.getPendingDrivers);
 router.get('/all', adminDriverController.getAllDrivers);
@@ -17,5 +22,6 @@ router.get('/:driverId', adminDriverController.getDriverDetails);
 router.post('/:driverId/approve', adminDriverController.approveDriver);
 router.post('/:driverId/reject', adminDriverController.rejectDriver);
 router.post('/:driverId/update-category', adminDriverController.updateDriverCategory);
+router.post('/:driverId/verify-document', adminDriverController.verifyDocument);
 
 module.exports = router;

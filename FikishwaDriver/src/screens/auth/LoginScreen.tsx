@@ -1,129 +1,195 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { Colors, Spacing, FontSizes } from '../../theme';
+import React from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { useAuthStore } from '../../store/useAuthStore';
 import api from '../../services/api';
+import driverApiService from '../../services/driverApiService';
+import { Car, Mail, Lock, LogIn } from 'lucide-react-native';
 
 const LoginScreen = () => {
-    const navigation = useNavigation<any>();
-    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const setAuth = useAuthStore((state) => state.setAuth);
 
-    const handleSendOtp = async () => {
-        if (!phone || phone.length < 9) {
-            Alert.alert('Error', 'Please enter a valid phone number');
+    const handleLogin = async () => {
+        if (!email || !password) {
+            Alert.alert('Error', 'Please enter both email and password');
             return;
         }
 
-        const fullPhone = `+254${phone}`;
-
+        setLoading(true);
         try {
-            setLoading(true);
-            const response = await api.post('/driver/auth/send-otp', { phone: fullPhone });
-
-            if (response.data.success) {
-                navigation.navigate('OTP', { phone: fullPhone, sessionId: response.data.data.sessionId });
-            } else {
-                Alert.alert('Error', response.data.message || 'Failed to send OTP');
-            }
+            const response = await driverApiService.login({ email, password });
+            const { user, token } = response.data;
+            await setAuth(user, token);
         } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.message || 'Connection failed');
+            console.error('Login error:', error);
+            Alert.alert('Login Failed', error.response?.data?.message || 'Invalid email or password');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Fikishwa Driver</Text>
-            <Text style={styles.subtitle}>Partner with us</Text>
-
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Phone Number</Text>
-                <View style={styles.phoneInputRow}>
-                    <Text style={styles.prefix}>+254</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="712345678"
-                        placeholderTextColor={Colors.textTertiary}
-                        value={phone}
-                        onChangeText={(text) => setPhone(text.replace(/[^\d]/g, ''))}
-                        keyboardType="phone-pad"
-                        maxLength={9}
-                    />
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.container}
+        >
+            <ScrollView contentContainerStyle={styles.scrollContainer}>
+                <View style={styles.header}>
+                    <View style={styles.logoContainer}>
+                        <Car size={48} color="#007AFF" />
+                    </View>
+                    <Text style={styles.title}>Fikishwa Driver</Text>
+                    <Text style={styles.subtitle}>Log in to start your shift</Text>
                 </View>
-            </View>
 
-            <TouchableOpacity
-                style={styles.button}
-                onPress={handleSendOtp}
-                disabled={loading}
-            >
-                <Text style={styles.buttonText}>{loading ? 'Sending...' : 'Continue'}</Text>
-            </TouchableOpacity>
-        </View>
+                <View style={styles.form}>
+                    <View style={styles.inputContainer}>
+                        <Mail size={20} color="#666" style={styles.inputIcon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Email Address"
+                            value={email}
+                            onChangeText={setEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            placeholderTextColor="#999"
+                        />
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                        <Lock size={20} color="#666" style={styles.inputIcon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Password"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                            placeholderTextColor="#999"
+                        />
+                    </View>
+
+                    <TouchableOpacity
+                        style={styles.loginButton}
+                        onPress={handleLogin}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <>
+                                <Text style={styles.loginButtonText}>Log In</Text>
+                                <LogIn size={20} color="#fff" style={{ marginLeft: 8 }} />
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.footer}>
+                    <Text style={styles.footerText}>Don't have an account? </Text>
+                    <TouchableOpacity>
+                        <Text style={styles.signupLink}>Sign Up</Text>
+                    </TouchableOpacity>
+                </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: Spacing.lg,
+        backgroundColor: '#fff',
+    },
+    scrollContainer: {
+        flexGrow: 1,
+        padding: 24,
         justifyContent: 'center',
-        backgroundColor: Colors.background,
+    },
+    header: {
+        alignItems: 'center',
+        marginBottom: 48,
+    },
+    logoContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 20,
+        backgroundColor: '#F0F7FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 3,
     },
     title: {
-        fontSize: FontSizes.xxl,
-        fontWeight: 'bold',
-        color: Colors.primary,
-        marginBottom: Spacing.xs,
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#1A1A1A',
+        marginBottom: 8,
     },
     subtitle: {
-        fontSize: FontSizes.lg,
-        color: Colors.textSecondary,
-        marginBottom: Spacing.xxl,
+        fontSize: 16,
+        color: '#666',
+    },
+    form: {
+        width: '100%',
     },
     inputContainer: {
-        marginBottom: Spacing.lg,
-    },
-    label: {
-        fontSize: FontSizes.sm,
-        color: Colors.textSecondary,
-        marginBottom: Spacing.xs,
-    },
-    phoneInputRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#F5F5F7',
+        borderRadius: 12,
+        marginBottom: 16,
+        paddingHorizontal: 16,
+        height: 56,
         borderWidth: 1,
-        borderColor: Colors.border,
-        borderRadius: 8,
-        backgroundColor: Colors.backgroundLighter,
-        overflow: 'hidden',
+        borderColor: '#E1E1E5',
     },
-    prefix: {
-        fontSize: FontSizes.md,
-        color: Colors.textPrimary,
-        paddingHorizontal: Spacing.md,
-        fontWeight: 'bold',
-        borderRightWidth: 1,
-        borderRightColor: Colors.border,
+    inputIcon: {
+        marginRight: 12,
     },
     input: {
         flex: 1,
-        padding: Spacing.md,
-        fontSize: FontSizes.md,
-        color: Colors.white,
+        fontSize: 16,
+        color: '#1A1A1A',
     },
-    button: {
-        backgroundColor: Colors.primary,
-        padding: Spacing.md,
-        borderRadius: 8,
+    loginButton: {
+        height: 56,
+        backgroundColor: '#007AFF',
+        borderRadius: 12,
+        flexDirection: 'row',
+        justifyContent: 'center',
         alignItems: 'center',
+        marginTop: 8,
+        shadowColor: '#007AFF',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    buttonText: {
-        color: Colors.white,
-        fontSize: FontSizes.md,
-        fontWeight: 'bold',
+    loginButtonText: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    footer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: 32,
+    },
+    footerText: {
+        color: '#666',
+        fontSize: 15,
+    },
+    signupLink: {
+        color: '#007AFF',
+        fontSize: 15,
+        fontWeight: '600',
     },
 });
 

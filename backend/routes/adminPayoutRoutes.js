@@ -10,7 +10,10 @@ router.use(checkRole('admin'));
 
 router.get('/drivers-owing', adminPayoutController.getDriversOwingCommission);
 router.get('/drivers-owed', adminPayoutController.getDriversOwedPayouts);
-router.get('/statistics', adminPayoutController.getPayoutStatistics);
+router.get('/statistics', (req, res, next) => {
+    console.log('HIT: /api/admin/payout/statistics');
+    next();
+}, adminPayoutController.getPayoutStatistics);
 router.get('/revenue', adminPayoutController.getRevenueStats);
 
 module.exports = router;

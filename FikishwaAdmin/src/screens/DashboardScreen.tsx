@@ -7,10 +7,9 @@ import {
     RefreshControl,
     StatusBar,
     TouchableOpacity,
-    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { Colors, Spacing, FontSizes, FontWeights, BorderRadius } from '../theme';
 import StatCard from '../components/StatCard';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -18,7 +17,6 @@ import { getPayoutStatistics, PayoutStatistics } from '../services/payoutService
 import { getRideStatistics, RideStats } from '../services/rideService';
 
 const DashboardScreen: React.FC = () => {
-    console.log('DashboardScreen: Rendering...');
     const navigation = useNavigation();
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -56,10 +54,6 @@ const DashboardScreen: React.FC = () => {
         fetchStatistics();
     }, []);
 
-    const openDrawer = () => {
-        navigation.dispatch(DrawerActions.openDrawer());
-    };
-
     const formatCurrency = (amount: number): string => {
         return `KES ${amount.toLocaleString()}`;
     };
@@ -69,19 +63,8 @@ const DashboardScreen: React.FC = () => {
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <SafeAreaView style={styles.container} edges={['bottom']}>
             <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
-
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={openDrawer} style={styles.menuButton}>
-                    <Text style={styles.menuIcon}>☰</Text>
-                </TouchableOpacity>
-                <View style={styles.headerText}>
-                    <Text style={styles.headerTitle}>Dashboard</Text>
-                    <Text style={styles.headerSubtitle}>Fikishwa Admin</Text>
-                </View>
-            </View>
 
             <ScrollView
                 style={styles.content}
@@ -226,36 +209,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: Colors.background,
     },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: Spacing.lg,
-        paddingVertical: Spacing.md,
-        backgroundColor: Colors.surface,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.border,
-    },
-    menuButton: {
-        padding: Spacing.sm,
-        marginRight: Spacing.md,
-    },
-    menuIcon: {
-        fontSize: 24,
-        color: Colors.textPrimary,
-    },
-    headerText: {
-        flex: 1,
-    },
-    headerTitle: {
-        fontSize: FontSizes.xl,
-        fontWeight: FontWeights.bold,
-        color: Colors.textPrimary,
-    },
-    headerSubtitle: {
-        fontSize: FontSizes.sm,
-        color: Colors.textSecondary,
-        marginTop: 2,
-    },
     content: {
         flex: 1,
     },
@@ -330,4 +283,3 @@ const styles = StyleSheet.create({
 });
 
 export default DashboardScreen;
-

@@ -157,8 +157,17 @@ class DriverAuthService {
         if (profileData.carMake) updatePayload.carMake = profileData.carMake;
         if (profileData.carModel) updatePayload.carModel = profileData.carModel;
         if (profileData.carYear) updatePayload.carYear = profileData.carYear;
+        if (profileData.plateNumber) updatePayload.plateNumber = profileData.plateNumber;
         if (profileData.carImageUrl) updatePayload.carImageUrl = profileData.carImageUrl;
         if (profileData.carRegistrationUrl) updatePayload.carRegistrationUrl = profileData.carRegistrationUrl;
+
+        // New Vehicle Fields
+        if (profileData.insuranceUrl) updatePayload.insuranceUrl = profileData.insuranceUrl;
+        if (profileData.insuranceExpiry) updatePayload.insuranceExpiry = profileData.insuranceExpiry;
+        if (profileData.inspectionUrl) updatePayload.inspectionUrl = profileData.inspectionUrl;
+        if (profileData.inspectionExpiry) updatePayload.inspectionExpiry = profileData.inspectionExpiry;
+        if (profileData.color) updatePayload.color = profileData.color;
+        if (profileData.taxiNumber) updatePayload.taxiNumber = profileData.taxiNumber;
 
         // Digital Data
         if (profileData.profilePhotoUrl) updatePayload.profilePhotoUrl = profileData.profilePhotoUrl;
@@ -171,20 +180,11 @@ class DriverAuthService {
         if (Object.keys(updatePayload).length > 0) {
             await updateDoc(driverDocRef, updatePayload);
 
-            // Notify driver that submission is received
-            const phone = docSnap.data().phone;
-            const message = `Hello ${profileData.name || 'Driver'}, we have received your Fikishwa registration documents. Our team is now reviewing them. You will be notified once your account is approved.`;
-
-            try {
-                await smsService.sendSMS(phone, message, "system", "registration_received");
-            } catch (smsError) {
-                console.error('Failed to send registration confirmation SMS:', smsError.message);
-            }
+            const updatedDoc = await getDoc(driverDocRef);
+            return updatedDoc.data();
         }
+    } // <-- closes updateProfile
 
-        const updatedDoc = await getDoc(driverDocRef);
-        return updatedDoc.data();
-    }
     async submitRegistration(uid, profileData) {
         // 1. Update profile with provided data (documents/details) first
         if (profileData && Object.keys(profileData).length > 0) {
@@ -204,10 +204,14 @@ class DriverAuthService {
         // 3. Validate Required Fields
         const requiredFields = [
             'idFrontUrl',
+            'idBackUrl',
             'licenseUrl',
             'goodConductUrl',
             'carImageUrl',
-            'carRegistrationUrl' // Logbook
+            'carRegistrationUrl', // Logbook
+            'plateNumber',
+            'insuranceUrl',
+            'inspectionUrl'
         ];
 
         const missingFields = requiredFields.filter(field => !data[field]);
@@ -231,6 +235,29 @@ class DriverAuthService {
         } catch (smsError) {
             console.error('Failed to send submission confirmation SMS:', smsError.message);
         }
+
+        const updatedDoc = await getDoc(driverDocRef);
+        return updatedDoc.data();
+    }
+
+    async getProfile(uid) {
+        const driverDocRef = doc(this.db, 'drivers', uid);
+        const docSnap = await getDoc(driverDocRef);
+
+        if (!docSnap.exists()) {
+            throw new Error('USER_NOT_FOUND');
+        }
+
+        return docSnap.data();
+    }
+
+    async acceptPolicies(uid) {
+        const driverDocRef = doc(this.db, 'drivers', uid);
+        await updateDoc(driverDocRef, {
+            agreementsAccepted: true,
+            onboardedAt: Timestamp.now(),
+            updatedAt: Timestamp.now()
+        });
 
         const updatedDoc = await getDoc(driverDocRef);
         return updatedDoc.data();

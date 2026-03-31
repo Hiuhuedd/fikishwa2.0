@@ -21,31 +21,34 @@ const findNearbyDrivers = async (pickup, radiusKm = 10, requestedCategory = null
         // or a dedicated spatial query tool like GeoFirestore.
         // For this implementation, we search for drivers in the same 5-char geohash box.
 
-        const driversRef = collection(db, 'activeDrivers');
+        // To avoid requiring a complex composite index in Firestore, 
+        // we'll fetch all drivers in the geohash range and filter in-memory.
+        // This is safe even with hundreds of drivers in a single geohash box (~25 sq km).
 
-        let constraints = [
-            where('online', '==', true),
-            where('busy', '==', false),
+        const driversRef = collection(db, 'activeDrivers');
+        const q = query(
+            driversRef,
             where('geohash', '>=', pickupGeohash),
             where('geohash', '<=', pickupGeohash + '\uf8ff')
-        ];
-
-        // Filter by category if specified
-        if (requestedCategory) {
-            constraints.push(where('currentCategory', '==', requestedCategory));
-        }
-
-        const q = query(driversRef, ...constraints);
+        );
 
         const querySnapshot = await getDocs(q);
         const drivers = [];
+
         querySnapshot.forEach((doc) => {
-            drivers.push({ id: doc.id, ...doc.data() });
+            const data = doc.data();
+
+            // In-memory filtering
+            const isOnline = data.online === true;
+            const isNotBusy = data.busy === false;
+            const matchesCategory = !requestedCategory || data.currentCategory === requestedCategory;
+
+            if (isOnline && isNotBusy && matchesCategory) {
+                drivers.push({ id: doc.id, ...data });
+            }
         });
 
         // Optional: Manual distance filtering if higher precision is needed
-        // but for now, matching by geohash prefix is enough for the core flow.
-
         return drivers;
     } catch (error) {
         console.error('Matching Service Error:', error);
@@ -53,6 +56,54 @@ const findNearbyDrivers = async (pickup, radiusKm = 10, requestedCategory = null
     }
 };
 
+/**
+ * Find nearby pending ride requests
+ * @param {object} location - { lat, lng }
+ * @param {string} category - driver's current vehicle category
+ */
+const findNearbyRequests = async (location, category = 'standard') => {
+    try {
+        const geohash = ngeohash.encode(location.lat, location.lng, 5);
+        console.log(`🔍 [Matching] DISCOVERY: Searching near ${geohash} for category: ${category}`);
+        
+        const requestRef = collection(db, 'rideRequests');
+        const q = query(
+            requestRef,
+            where('geohash', '>=', geohash),
+            where('geohash', '<=', geohash + '\uf8ff')
+        );
+
+        const snapshot = await getDocs(q);
+        const requests = [];
+
+        console.log(`🔍 [Matching] DISCOVERY: Found ${snapshot.size} area matches.`);
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const reqCategory = data.vehicleCategory || data.rideType || 'standard';
+            const isActive = data.status === 'pending';
+            const isMatch = reqCategory === category && isActive;
+            
+            console.log(`   - [${isMatch ? 'MATCH' : 'SKIP'}] Request ${doc.id}: Status=${data.status}, RequestCat=${reqCategory}, DriverCat=${category}, Geohash=${data.geohash}`);
+            
+            if (isMatch) {
+                requests.push({ id: doc.id, ...data });
+            }
+        });
+
+        // If no strict category match, but we have requests, log it clearly for debugging
+        if (requests.length === 0 && snapshot.size > 0) {
+            console.log(`⚠️ [Matching] DISCOVERY: Nearby requests found but NONE matched the driver's category (${category}).`);
+        }
+
+        return requests.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    } catch (error) {
+        console.error('Find Nearby Requests Error:', error);
+        throw error;
+    }
+};
+
 module.exports = {
-    findNearbyDrivers
+    findNearbyDrivers,
+    findNearbyRequests
 };

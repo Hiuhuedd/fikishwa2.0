@@ -9,7 +9,8 @@ import {
     TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { ArrowLeft, RotateCw, Search, X } from 'lucide-react-native';
 import { Colors, Spacing, FontSizes, FontWeights, BorderRadius } from '../../theme';
 import CustomerCard from '../../components/CustomerCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -69,8 +70,8 @@ const CustomerListScreen: React.FC = () => {
         fetchCustomers();
     }, []);
 
-    const openDrawer = () => {
-        navigation.dispatch(DrawerActions.openDrawer());
+    const handleBack = () => {
+        navigation.goBack();
     };
 
     const renderItem = ({ item }: { item: Customer }) => (
@@ -81,20 +82,20 @@ const CustomerListScreen: React.FC = () => {
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={openDrawer} style={styles.menuButton}>
-                    <Text style={styles.menuIcon}>☰</Text>
+                <TouchableOpacity onPress={handleBack} style={styles.menuButton}>
+                    <ArrowLeft size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <View style={styles.headerText}>
                     <Text style={styles.headerTitle}>Customers</Text>
                 </View>
                 <TouchableOpacity onPress={fetchCustomers} style={styles.refreshButton}>
-                    <Text style={styles.refreshIcon}>↻</Text>
+                    <RotateCw size={22} color={Colors.primary} />
                 </TouchableOpacity>
             </View>
 
             {/* Search Bar */}
             <View style={styles.searchContainer}>
-                <Text style={styles.searchIcon}>🔍</Text>
+                <Search size={18} color={Colors.textSecondary} style={{ marginRight: Spacing.sm }} />
                 <TextInput
                     style={styles.searchInput}
                     placeholder="Search by name or phone..."
@@ -104,7 +105,7 @@ const CustomerListScreen: React.FC = () => {
                 />
                 {searchQuery.length > 0 && (
                     <TouchableOpacity onPress={() => setSearchQuery('')}>
-                        <Text style={styles.clearIcon}>✕</Text>
+                        <X size={18} color={Colors.textSecondary} />
                     </TouchableOpacity>
                 )}
             </View>

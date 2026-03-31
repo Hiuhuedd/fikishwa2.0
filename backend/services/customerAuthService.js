@@ -26,7 +26,7 @@ class CustomerAuthService {
 
     async sendOtp(phone, ipAddress) {
         const normalizedPhone = smsService.normalizePhone(phone);
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
         const expiresAt = Timestamp.fromDate(new Date(Date.now() + 5 * 60 * 1000));
 
@@ -41,6 +41,13 @@ class CustomerAuthService {
 
         const sessionId = docRef.id;
         const message = `Your Fikishwa verification code is ${otp}. Valid for 5 minutes. Do not share.`;
+
+        // Print the OTP explicitly in the console for development testing
+        console.log(`\n================================`);
+        console.log(`🔑 DEVELOPMENT OTP BYPASS:`);
+        console.log(`📱 Phone: ${normalizedPhone}`);
+        console.log(`🔢 Code:  ${otp}`);
+        console.log(`================================\n`);
 
         await smsService.sendSMS(normalizedPhone, message, "system", "auth_otp");
 
@@ -143,6 +150,8 @@ class CustomerAuthService {
         if (profileData.name) updatePayload.name = profileData.name;
         if (profileData.profilePhotoUrl) updatePayload.profilePhotoUrl = profileData.profilePhotoUrl;
         if (profileData.emergencyContact) updatePayload.emergencyContact = profileData.emergencyContact;
+        if (profileData.homeLocation) updatePayload.homeLocation = profileData.homeLocation;
+        if (profileData.workLocation) updatePayload.workLocation = profileData.workLocation;
 
         if (Object.keys(updatePayload).length > 0) {
             await updateDoc(customerDocRef, updatePayload);

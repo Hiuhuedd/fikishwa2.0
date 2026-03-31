@@ -10,10 +10,13 @@ exports.createCategory = async (req, res) => {
 };
 
 exports.getAllCategories = async (req, res) => {
+    console.log('🚕 Fetching all vehicle categories...');
     try {
         const categories = await vehicleCategoryService.getAllCategories();
+        console.log(`✅ Returned ${categories.length} categories`);
         res.json({ success: true, categories });
     } catch (error) {
+        console.error('❌ Error fetching categories:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 };

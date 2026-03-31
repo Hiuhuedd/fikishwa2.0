@@ -1,46 +1,53 @@
-/**
- * Fikishwa Driver App - Color Palette
- * Inspired by Spotify's premium dark aesthetic
- */
-
-export const colors = {
-    // Brand Colors
-    primary: '#1DB954', // Spotify Green
-    primaryDark: '#1AA34A',
-    primaryLight: '#1ED760',
-    secondary: '#FFFFFF',
-
-    // Backgrounds
-    background: '#121212', // Main dark background
-    backgroundLight: '#1E1E1E', // Card background
-    backgroundLighter: '#282828', // Elevated surface
-    surface: '#282828', // Same as backgroundLighter
-    backgroundOverlay: 'rgba(0, 0, 0, 0.7)',
-
-    // Text
-    textPrimary: '#FFFFFF',
-    textSecondary: '#B3B3B3',
-    textTertiary: '#535353',
-    textInverse: '#121212',
-
-    // Status Indicators
-    success: '#1DB954',
-    warning: '#FFA500',
-    error: '#E91429',
-    info: '#2E77D0',
-
-    // Borders & Dividers
-    border: '#282828',
-    divider: '#282828',
-
-    // Specific States
-    online: '#1DB954',
-    offline: '#535353',
-    disabled: '#3E3E3E',
-
-    // Essential colors
+export const lightColors = {
+    primary: '#D69B1D',
+    primaryDark: '#B58215',
+    primaryLight: '#FDBE33',
+    secondary: '#D97706',
+    background: '#FFFFFF',
+    backgroundCard: '#F8FAFC',
+    backgroundHover: '#F1F5F9',
+    surface: '#FFFFFF',
+    backgroundOverlay: 'rgba(0,0,0,0.4)',
+    textPrimary: '#1E293B',
+    textSecondary: '#475569',
+    textTertiary: '#94A3B8',
+    textInverse: '#FFFFFF',
+    textOnPrimary: '#FFFFFF',
+    success: '#059669',
+    warning: '#D97706',
+    error: '#DC2626',
+    info: '#2563EB',
+    border: '#E2E8F0',
+    divider: '#F1F5F9',
     white: '#FFFFFF',
     black: '#000000',
+    shadow: 'rgba(0,0,0,0.08)',
 };
 
-export type Colors = typeof colors;
+export const darkColors = {
+    primary: '#FDBE33',
+    primaryDark: '#D69B1D',
+    primaryLight: '#FEF3C7',
+    secondary: '#F59E0B',
+    background: '#0F172A',
+    backgroundCard: '#1E293B',
+    backgroundHover: '#334155',
+    surface: '#1E293B',
+    backgroundOverlay: 'rgba(0,0,0,0.6)',
+    textPrimary: '#F8FAFC',
+    textSecondary: '#94A3B8',
+    textTertiary: '#64748B',
+    textInverse: '#0F172A',
+    textOnPrimary: '#0F172A',
+    success: '#10B981',
+    warning: '#F59E0B',
+    error: '#EF4444',
+    info: '#60A5FA',
+    border: '#334155',
+    divider: '#334155',
+    white: '#FFFFFF',
+    black: '#000000',
+    shadow: 'rgba(0,0,0,0.4)',
+};
+
+export const colors = lightColors; // Default to light for now

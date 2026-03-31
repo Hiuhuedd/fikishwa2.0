@@ -63,12 +63,18 @@ const PromoCard: React.FC<PromoCardProps> = ({ promotion, onDelete }) => {
 const styles = StyleSheet.create({
     container: {
         backgroundColor: Colors.surface,
-        borderRadius: BorderRadius.lg,
-        marginBottom: Spacing.md,
-        padding: Spacing.md,
+        borderRadius: BorderRadius.xl,
+        marginBottom: Spacing.lg,
+        padding: Spacing.lg,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        ...Shadows.sm,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 4,
     },
     expiredContainer: {
         backgroundColor: Colors.surfaceLight,
@@ -81,10 +87,11 @@ const styles = StyleSheet.create({
     rightContent: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingLeft: Spacing.md,
-        borderLeftWidth: 1,
+        paddingLeft: Spacing.lg,
+        borderLeftWidth: 2,
         borderLeftColor: Colors.border,
-        minWidth: 80,
+        borderStyle: 'dashed',
+        minWidth: 100,
     },
     code: {
         fontSize: FontSizes.lg,

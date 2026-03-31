@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http'); // Added for Socket.io
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const path = require('path');
 require('dotenv').config();
 
 // Note: Firebase Client initialization happens in ./firebase.js
@@ -24,35 +25,67 @@ const PORT = process.env.PORT || 3000;
 socketService.initSocket(server);
 
 // Middleware
+// NOTE: For production deployment (e.g. Render), restrict CORS to specific domains
+// app.use(cors({ origin: ['https://fikishwa.app', 'https://admin.fikishwa.app'] }));
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Request Logger
+// Request Logger & Route Debugger
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${req.method} ${req.url}`);
     next();
 });
 
-// Routes
+// Trace specific /api routes to see if they reach this point
+app.use('/api', (req, res, next) => {
+    console.log(`📋 API Route Hit: ${req.method} ${req.originalUrl}`);
+    next();
+});
+
+app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/customer/auth', customerAuthRoutes);
 app.use('/api/driver/auth', driverAuthRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/customer/ride', rideRoutes);
-app.use('/api/driver/ride', driverRideRoutes);
+app.use('/api/driver/ride', (req, res, next) => {
+    console.log(`🚕 [ROUTE TRACE] Entering driverRideRoutes | Method: ${req.method} | Path: ${req.url}`);
+    if (!driverRideRoutes) {
+        console.error('🔴 driverRideRoutes is undefined in server.js!');
+    }
+    driverRideRoutes(req, res, next);
+});
 app.use('/api/admin/config', require('./routes/adminConfigRoutes'));
 app.use('/api/admin/payout', require('./routes/adminPayoutRoutes'));
 app.use('/api/admin/drivers', require('./routes/adminDriverRoutes'));
+app.use('/api/admin/rides', require('./routes/adminRideRoutes'));
+app.use('/api/admin/vehicle-categories', require('./routes/adminVehicleCategoryRoutes'));
 app.use('/api/driver/payout', require('./routes/driverPayoutRoutes'));
 app.use('/api/admin/customers', require('./routes/adminCustomerRoutes'));
 app.use('/api/admin/promotions', require('./routes/adminPromotionRoutes'));
+app.use('/api/referral', require('./routes/referralRoutes'));
 app.use('/api/customer/promo', require('./routes/customerPromoRoutes'));
+app.get('/health', (req, res) => {
+    res.status(200).json({ success: true, status: 'OK', timestamp: new Date().toISOString() });
+});
 app.get('/', (req, res) => {
     res.send('Fikishwa Backend API (JWT Mode) is running with Socket.io');
 });
 
 // Test/Debug Routes
 app.use('/api/test', require('./routes/testRoutes'));
+
+// 404 Handler for /api
+app.use('/api', (req, res) => {
+    console.log(`🔍 NO ROUTE MATCHED for: ${req.method} ${req.originalUrl}`);
+    res.status(404).json({
+        success: false,
+        message: `Route not found: ${req.method} ${req.originalUrl}`,
+        path: req.originalUrl
+    });
+});
 
 // Global Error Handler
 app.use((err, req, res, next) => {

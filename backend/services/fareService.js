@@ -42,6 +42,7 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
         // Fetch dynamic config
         const config = cachedConfig || await configService.getConfig();
         const surgeMultiplier = config.surgeMultiplier || 1.0;
+        console.log(config);
 
         let rates = {};
 
@@ -52,7 +53,7 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
                     rates = {
                         baseFare: cachedCategory.baseFare,
                         perKm: cachedCategory.perKmRate,
-                        perMin: cachedCategory.perMinRate,
+                        perMin: cachedCategory.perMinuteRate || cachedCategory.perMinRate,
                         perStop: cachedCategory.perStopFee,
                         minFare: cachedCategory.minFare || cachedCategory.baseFare,
                         items: cachedCategory
@@ -64,7 +65,7 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
                         rates = {
                             baseFare: category.baseFare,
                             perKm: category.perKmRate,
-                            perMin: category.perMinRate,
+                            perMin: category.perMinuteRate || category.perMinRate,
                             perStop: category.perStopFee,
                             minFare: category.minFare || category.baseFare,
                             items: category // Keep full category for limits
@@ -84,25 +85,21 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
                 perKm: config.perKmRate?.[rideType] || fallbackRates.perKm,
                 perMin: config.perMinRate?.[rideType] || fallbackRates.perMin,
                 perStop: config.perStopFee || fallbackRates.perStop,
-                minFare: 0
+                minFare: config.minFare?.[rideType] || fallbackRates.baseFare
             };
         }
 
         const distanceKm = distanceMeters / 1000;
-        const durationMin = durationSeconds / 60;
+        const durationMin = durationSeconds / 60; // Kept for metadata but not in total
 
         const distanceFee = distanceKm * rates.perKm;
-        const durationFee = durationMin * rates.perMin;
-        const stopsFee = stopCount * rates.perStop;
 
         // --- Parcel Surcharges ---
         let weightSurcharge = 0;
         let fragileFee = 0;
 
         if (rideType === 'parcel' && parcelDetails) {
-            // Weight Logic
-            // Default: 5kg free, then 50 KES per kg
-            // If category has config, use that (not currently in schema, so using defaults or global config)
+            // Weight Logic: 5kg free, then 50 KES per kg (configurable)
             const baseWeight = config.parcelBaseWeightKg || 5;
             const perKgRate = config.parcelPerKgRate || 50;
 
@@ -118,7 +115,9 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
             }
         }
 
-        const subtotal = rates.baseFare + distanceFee + durationFee + stopsFee + weightSurcharge + fragileFee;
+        // --- Core Calculation ---
+        // Simplified: (Distance * Rate) + Base + Parcel Surcharges
+        const subtotal = rates.baseFare + distanceFee + weightSurcharge + fragileFee;
         let total = subtotal * surgeMultiplier;
 
         // Apply Category Min Fare Override
@@ -132,7 +131,6 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
 
         if (promoCode) {
             try {
-                // Lean require to avoid circular dependency
                 const promotionService = require('./promotionService');
                 const promoResult = await promotionService.validatePromotion(promoCode, userId, Math.ceil(total));
                 if (promoResult.valid) {
@@ -154,15 +152,17 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
             distanceKm: parseFloat(distanceKm.toFixed(2)),
             durationMin: Math.ceil(durationMin),
             breakdown: {
+                minFare: rates.minFare,
                 baseFare: rates.baseFare,
                 distanceFee: Math.ceil(distanceFee),
-                durationFee: Math.ceil(durationFee),
-                stopsFee: stopsFee,
+                timeFee: 0, // Time fee simplified out of Fikishwa core formula
                 weightSurcharge: weightSurcharge,
                 fragileFee: fragileFee,
                 surgeMultiplier: surgeMultiplier,
                 subtotal: Math.ceil(subtotal),
-                discount: discount
+                discount: discount,
+                tax: 0, // Included for UI scaling
+                vat: 0  // Included for UI scaling
             }
         };
     } catch (error) {
@@ -171,13 +171,12 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
         // Ultrafallback
         const rates = FALLBACK_RATES[rideType] || FALLBACK_RATES.inperson;
         const distanceKm = distanceMeters / 1000;
-        const durationMin = durationSeconds / 60;
-        const total = rates.baseFare + (distanceKm * rates.perKm) + (durationMin * rates.perMin) + (stopCount * rates.perStop);
+        const total = rates.baseFare + (distanceKm * rates.perKm);
 
         return {
             estimatedFare: Math.ceil(total),
             originalFare: Math.ceil(total),
-            breakdown: { baseFare: rates.baseFare }
+            breakdown: { baseFare: rates.baseFare, distanceFee: Math.ceil(distanceKm * rates.perKm) }
         };
     }
 };

@@ -96,9 +96,42 @@ const submitRegistration = async (req, res) => {
     }
 };
 
+const getProfile = async (req, res) => {
+    try {
+        const uid = req.user.uid;
+        const profile = await driverAuthService.getProfile(uid);
+
+        res.status(200).json({
+            success: true,
+            data: profile
+        });
+    } catch (error) {
+        console.error('Driver Get Profile Error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+const acceptPolicies = async (req, res) => {
+    try {
+        const uid = req.user.uid;
+        const updatedDriver = await driverAuthService.acceptPolicies(uid);
+
+        res.status(200).json({
+            success: true,
+            message: 'Policies accepted successfully',
+            data: updatedDriver
+        });
+    } catch (error) {
+        console.error('Driver Accept Policies Error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
 module.exports = {
     sendOtp,
     verifyOtp,
     updateProfile,
-    submitRegistration
+    submitRegistration,
+    getProfile,
+    acceptPolicies
 };

@@ -1,5 +1,5 @@
 const { getFirestoreApp } = require('../firebase');
-const { doc, updateDoc, serverTimestamp, setDoc, deleteDoc } = require('firebase/firestore');
+const { doc, getDoc, updateDoc, serverTimestamp, setDoc, deleteDoc } = require('firebase/firestore');
 const rideService = require('../services/rideService');
 const fareService = require('../services/fareService');
 const ngeohash = require('ngeohash');
@@ -18,11 +18,25 @@ exports.goOnline = async (req, res) => {
     }
 
     try {
-        // Validate category selection
-        // In a real app we would check if selectedCategory is in driver's approvedCategories
-        // For now we trust or default to 'standard'
+        // Strict Onboarding Gating
+        const driverRef = doc(db, 'drivers', driverId);
+        const driverDoc = await getDoc(driverRef);
 
-        let category = selectedCategory || 'standard';
+        if (!driverDoc.exists()) {
+            return res.status(404).json({ success: false, error: 'Driver not found' });
+        }
+
+        const data = driverDoc.data();
+        if (data.registrationStatus !== 'approved') {
+            return res.status(403).json({
+                success: false,
+                error: 'FORBIDDEN',
+                message: 'Your account is under review or not yet approved. You cannot go online.'
+            });
+        }
+
+        // Use the driver's primary vehicleType or their first approved category
+        let category = data.vehicleType || (data.approvedCategories && data.approvedCategories.length > 0 ? data.approvedCategories[0] : 'standard');
 
         const geohash = ngeohash.encode(location.lat, location.lng, 6);
         await setDoc(doc(db, 'activeDrivers', driverId), {
@@ -35,7 +49,19 @@ exports.goOnline = async (req, res) => {
             lastSeenAt: serverTimestamp()
         });
 
-        res.json({ success: true, message: 'Driver is now online', currentCategory: category });
+        // 2. Look for existing pending requests nearby for this category
+        const matchingService = require('../services/matchingService');
+        const pendingRequests = await matchingService.findNearbyRequests(location, category);
+        const pendingRequest = pendingRequests.length > 0 ? pendingRequests[0] : null;
+
+        console.log(`📡 [GoOnline] Discovery check: Found ${pendingRequests.length} requests. Selected: ${pendingRequest ? pendingRequest.id : 'None'}`);
+
+        res.json({
+            success: true,
+            message: 'Driver is now online',
+            currentCategory: category,
+            pendingRequest: pendingRequest // Return pending request if found
+        });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -67,13 +93,26 @@ exports.goOffline = async (req, res) => {
 exports.acceptRide = async (req, res) => {
     const { rideId } = req.body;
     const driverId = req.user.uid;
-    const driverDetails = {
-        name: req.user.name || 'Driver',
-        phone: req.user.phone,
-        // photo: req.user.photo
-    };
 
     try {
+        const driverRef = doc(db, 'drivers', driverId);
+        const driverSnap = await getDoc(driverRef);
+        const driverData = driverSnap.data() || {};
+
+        console.log(`🚕 [AcceptRide] Fetching details for driver: ${driverId}`);
+        console.log(`🚕 [AcceptRide] Raw Driver Data from DB:`, JSON.stringify(driverData));
+
+        const driverDetails = {
+            name: driverData.name || req.user.name || 'Driver',
+            phone: driverData.phone || req.user.phone,
+            rating: driverData.rating || 4.8,
+            vehicleMake: driverData.carMake || '',
+            vehicleModel: driverData.carModel || '',
+            plateNumber: driverData.plateNumber || '',
+            carImageUrl: driverData.carImageUrl || null,
+            vehicleColor: driverData.vehicleColor || '#4CD964'
+        };
+
         const ride = await rideService.acceptRide(rideId, driverId, driverDetails);
 
         // Also mark driver as busy
@@ -84,6 +123,19 @@ exports.acceptRide = async (req, res) => {
         res.json({ success: true, ride });
     } catch (error) {
         res.status(400).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * Update ride status (arrived, etc.)
+ */
+exports.updateStatus = async (req, res) => {
+    const { rideId, status } = req.body;
+    try {
+        const ride = await rideService.updateRideStatus(rideId, status);
+        res.json({ success: true, ride });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 };
 
@@ -123,6 +175,46 @@ exports.completeRide = async (req, res) => {
         });
 
         res.json({ success: true, ride });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * Confirm payment received
+ */
+exports.confirmPayment = async (req, res) => {
+    const { rideId } = req.body;
+    const driverId = req.user.uid;
+
+    try {
+        const { doc, getDoc, updateDoc } = require('firebase/firestore');
+        const db = getFirestoreApp();
+        const rideRef = doc(db, 'rides', rideId);
+        const rideSnap = await getDoc(rideRef);
+
+        if (!rideSnap.exists()) {
+            return res.status(404).json({ error: 'Ride not found' });
+        }
+
+        const rideData = rideSnap.data();
+        if (rideData.driverId !== driverId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        await updateDoc(rideRef, {
+            paymentStatus: 'paid',
+            paidAt: serverTimestamp()
+        });
+
+        // Notify customer
+        const socketService = require('../services/socketService');
+        socketService.emitToUser(rideData.customerId, 'payment-confirmed', {
+            rideId,
+            status: 'paid'
+        });
+
+        res.json({ success: true, message: 'Payment confirmed' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -202,6 +294,45 @@ exports.getRecentRides = async (req, res) => {
 };
 
 /**
+ * Get full ride history for driver
+ */
+exports.getRideHistory = async (req, res) => {
+    // For now, we reuse getRecentRides logic but ensure it's mapped to the correct frontend expected path
+    return exports.getRecentRides(req, res);
+};
+
+/**
+ * Get current active ride for driver
+ */
+exports.getActiveRide = async (req, res) => {
+    const driverId = req.user.uid;
+    try {
+        const { collection, query, where, getDocs, limit } = require('firebase/firestore');
+        const db = getFirestoreApp();
+        const ridesRef = collection(db, 'rides');
+        // Include 'searching' as a fallback active state for the driver
+        const statuses = ['accepted', 'arriving', 'arrived', 'in_progress', 'picking_up'];
+
+        const q = query(
+            ridesRef,
+            where('driverId', '==', driverId),
+            where('status', 'in', statuses),
+            limit(1)
+        );
+
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) {
+            return res.json({ success: true, ride: null });
+        }
+
+        const rideDoc = snapshot.docs[0];
+        res.json({ success: true, ride: { rideId: rideDoc.id, ...rideDoc.data() } });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
  * Get driver's approved categories
  */
 exports.getAvailableCategories = async (req, res) => {
@@ -227,6 +358,34 @@ exports.getAvailableCategories = async (req, res) => {
         const available = allCategories.filter(cat => approvedIds.includes(cat.categoryId));
 
         res.json({ success: true, categories: available });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+/**
+ * Cancel ride
+ */
+exports.cancelRide = async (req, res) => {
+    const { rideId, reason } = req.body;
+    const driverId = req.user.uid;
+
+    if (!rideId) {
+        return res.status(400).json({ error: 'Ride ID is required' });
+    }
+
+    try {
+        const ride = await rideService.updateRideStatus(rideId, 'cancelled', {
+            cancelledBy: 'driver',
+            cancellationReason: reason || 'Driver cancelled',
+            cancelledAt: serverTimestamp()
+        });
+
+        // Also mark driver as free
+        await updateDoc(doc(db, 'activeDrivers', driverId), {
+            busy: false
+        });
+
+        res.json({ success: true, ride });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

@@ -11,9 +11,8 @@ export const TOKEN_KEY = '@fikishwa_admin_token';
 export const USER_KEY = '@fikishwa_admin_user';
 
 // API Configuration
-// Use your machine's local IP for physical device testing
-// Use 10.0.2.2 for Android emulator, or localhost for iOS simulator
-const API_BASE_URL = 'https://fikishwa2-0-backend.onrender.com'
+// Using the development server IP
+const API_BASE_URL = 'http://192.168.100.6:3000';
 
 // Create axios instance
 const api = axios.create({
@@ -49,7 +48,6 @@ api.interceptors.response.use(
         if (error.response?.status === 401) {
             // Token expired or invalid - clear storage
             await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
-            // The AuthContext will handle redirecting to login
         }
         return Promise.reject(error);
     }

@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "Fikishwa Customer",
+    "slug": "fikishwacustomer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fikishwa.customer",
+      "config": {
+        "googleMapsApiKey": "AIzaSyCTC78aB0ukv5ERXLwBM_tyiFIy13697wc"
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Fikishwa needs your location to find nearby drivers and set your pickup point.",
+        "NSLocationAlwaysUsageDescription": "Fikishwa needs your location to track your ride in real-time.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Fikishwa needs your location to find drivers and track your rides."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "package": "com.fikishwa.customer",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCTC78aB0ukv5ERXLwBM_tyiFIy13697wc"
+        }
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "ACCESS_BACKGROUND_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Fikishwa to use your location."
+        }
+      ]
+    ]
+  }
+}
