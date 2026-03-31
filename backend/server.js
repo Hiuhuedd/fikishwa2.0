@@ -22,6 +22,9 @@ const app = express();
 const server = http.createServer(app); // Created http server
 const PORT = process.env.PORT || 3000;
 
+// Render/Heroku Proxy trust
+app.set('trust proxy', 1);
+
 // Initialize Socket.io
 socketService.initSocket(server);
 
@@ -113,6 +116,6 @@ app.use((err, req, res, next) => {
 });
 
 // Start Server
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
 });

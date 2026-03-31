@@ -1,67 +1,96 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, RefreshControl, Alert } from 'react-native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Clock, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import driverApiService from '../../services/driverApiService';
 
 const StatusPendingScreen = () => {
-    const { user, logout } = useAuthStore();
+    const { user, setAuth, logout } = useAuthStore();
     const navigation = useNavigation<any>();
+    const [refreshing, setRefreshing] = useState(false);
 
     const isRejected = user?.registrationStatus === 'rejected';
 
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            const response = await driverApiService.getProfile();
+            if (response.data.success) {
+                const refreshedUser = response.data.data;
+                const currentToken = useAuthStore.getState().token;
+                await setAuth(refreshedUser, currentToken!);
+
+                if (refreshedUser.registrationStatus === 'approved') {
+                    Alert.alert('Approved!', 'Your account has been approved. Welcome to Fikishwa!');
+                }
+            }
+        } catch (error) {
+            console.error('Failed to refresh profile:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    }, [setAuth]);
+
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.content}>
-                <View style={[styles.iconContainer, isRejected && styles.rejectedIconBg]}>
-                    {isRejected ? (
-                        <AlertCircle size={80} color="#FF3B30" />
+            <ScrollView
+                contentContainerStyle={{ flexGrow: 1 }}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />
+                }
+            >
+                <View style={styles.content}>
+                    <View style={[styles.iconContainer, isRejected && styles.rejectedIconBg]}>
+                        {isRejected ? (
+                            <AlertCircle size={80} color="#FF3B30" />
+                        ) : (
+                            <Clock size={80} color="#007AFF" />
+                        )}
+                    </View>
+
+                    <Text style={styles.title}>
+                        {isRejected ? 'Application Rejected' : 'Application Pending'}
+                    </Text>
+
+                    <Text style={styles.description}>
+                        {isRejected
+                            ? `Unfortunately, your application was not approved. Reason: ${user?.rejectedReason || 'Please contact support for more details.'}`
+                            : 'Thank you for joining Fikishwa! Your documents are currently being reviewed by our team. This usually takes 24-48 hours.'
+                        }
+                    </Text>
+
+                    {!isRejected ? (
+                        <View style={styles.statusBox}>
+                            <View style={styles.statusItem}>
+                                <CheckCircle2 size={20} color="#4CD964" />
+                                <Text style={styles.statusText}>Documents Submitted</Text>
+                            </View>
+                            <View style={styles.statusItem}>
+                                <Clock size={20} color="#007AFF" />
+                                <Text style={[styles.statusText, { color: '#007AFF', fontWeight: '700' }]}>Verification in Progress</Text>
+                            </View>
+                            <View style={[styles.statusItem, { opacity: 0.5 }]}>
+                                <AlertCircle size={20} color="#666" />
+                                <Text style={styles.statusText}>Account Activation</Text>
+                            </View>
+                        </View>
                     ) : (
-                        <Clock size={80} color="#007AFF" />
+                        <TouchableOpacity
+                            style={styles.resubmitBtn}
+                            onPress={() => navigation.navigate('DocumentUpload')}
+                        >
+                            <Text style={styles.resubmitText}>Update Documents</Text>
+                        </TouchableOpacity>
                     )}
                 </View>
 
-                <Text style={styles.title}>
-                    {isRejected ? 'Application Rejected' : 'Application Pending'}
-                </Text>
-
-                <Text style={styles.description}>
-                    {isRejected
-                        ? `Unfortunately, your application was not approved. Reason: ${user?.rejectedReason || 'Please contact support for more details.'}`
-                        : 'Thank you for joining Fikishwa! Your documents are currently being reviewed by our team. This usually takes 24-48 hours.'
-                    }
-                </Text>
-
-                {!isRejected ? (
-                    <View style={styles.statusBox}>
-                        <View style={styles.statusItem}>
-                            <CheckCircle2 size={20} color="#4CD964" />
-                            <Text style={styles.statusText}>Documents Submitted</Text>
-                        </View>
-                        <View style={styles.statusItem}>
-                            <Clock size={20} color="#007AFF" />
-                            <Text style={[styles.statusText, { color: '#007AFF', fontWeight: '700' }]}>Verification in Progress</Text>
-                        </View>
-                        <View style={[styles.statusItem, { opacity: 0.5 }]}>
-                            <AlertCircle size={20} color="#666" />
-                            <Text style={styles.statusText}>Account Activation</Text>
-                        </View>
-                    </View>
-                ) : (
-                    <TouchableOpacity
-                        style={styles.resubmitBtn}
-                        onPress={() => navigation.navigate('DocumentUpload')}
-                    >
-                        <Text style={styles.resubmitText}>Update Documents</Text>
+                <View style={styles.footer}>
+                    <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+                        <Text style={styles.logoutText}>Sign Out</Text>
                     </TouchableOpacity>
-                )}
-            </View>
-
-            <View style={styles.footer}>
-                <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-                    <Text style={styles.logoutText}>Sign Out</Text>
-                </TouchableOpacity>
-            </View>
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };

@@ -1,6 +1,7 @@
 const axios = require('axios');
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+console.log(`🗺️ [GEO] Google Maps API Key loaded: ${GOOGLE_MAPS_API_KEY ? GOOGLE_MAPS_API_KEY.substring(0, 8) + '...' : 'MISSING'}`);
 
 /**
  * Forward geocoding: Get coordinates from address query (Google Maps)

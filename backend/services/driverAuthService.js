@@ -206,7 +206,6 @@ class DriverAuthService {
             'idFrontUrl',
             'idBackUrl',
             'licenseUrl',
-            'goodConductUrl',
             'carImageUrl',
             'carRegistrationUrl', // Logbook
             'plateNumber',

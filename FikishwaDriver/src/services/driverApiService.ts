@@ -1,4 +1,5 @@
-import api from './api';
+import api, { API_BASE_URL, TOKEN_KEY } from './api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const driverApiService = {
     // Auth
@@ -7,7 +8,32 @@ export const driverApiService = {
     verifyOtp: (payload: any) => api.post('/api/driver/auth/verify-otp', payload),
     updateProfile: (payload: any) => api.post('/api/driver/auth/update-profile', payload),
     submitRegistration: (payload: any) => api.post('/api/driver/auth/submit-registration', payload),
-    uploadImage: (formData: FormData) => api.post('/api/upload', formData),
+    uploadImage: async (formData: FormData) => {
+        console.log(`[DEBUG] Attempting upload to: ${API_BASE_URL}`);
+        try {
+            const health = await fetch(`${API_BASE_URL}/health`);
+            console.log(`[DEBUG] Health check reachable! Status: ${health.status}`);
+        } catch (e) {
+            console.error(`[DEBUG] CRITICAL: Cannot reach ${API_BASE_URL}. The device cannot connect to the server (Check IP or Windows Firewall).`);
+            throw new Error(`Cannot connect to server at ${API_BASE_URL}. Confirm this IP is reachable from your emulator/WSA.`);
+        }
+
+        const token = await AsyncStorage.getItem(TOKEN_KEY);
+        const response = await fetch(`${API_BASE_URL}/api/upload`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                Accept: 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+            }
+        });
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Upload failed: ${response.status} ${errText}`);
+        }
+        const data = await response.json();
+        return { data };
+    },
 
     // Ride Lifecycle
     getActiveRide: () => api.get('/api/driver/ride/active'),

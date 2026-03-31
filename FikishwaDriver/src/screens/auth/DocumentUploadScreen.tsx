@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image, ActivityIndicator, TextInput, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuthStore } from '../../store/useAuthStore';
 import api from '../../services/api';
 import driverApiService from '../../services/driverApiService';
@@ -23,10 +24,27 @@ const DocumentUploadScreen = () => {
         insuranceExpiry: '',
         inspectionUrl: (user as any)?.inspectionUrl || null,
         inspectionExpiry: '',
-        logbookUrl: user?.carRegistrationUrl || null,
+        carRegistrationUrl: user?.carRegistrationUrl || null,
         carImageUrl: user?.carImageUrl || null,
     });
     const [uploading, setUploading] = useState<string | null>(null);
+    const [showDatePicker, setShowDatePicker] = useState<keyof typeof docs | null>(null);
+
+    const onDateChange = (event: any, selectedDate?: Date) => {
+        if (Platform.OS === 'android') {
+            setShowDatePicker(null);
+        }
+        if (selectedDate && showDatePicker) {
+            const day = String(selectedDate.getDate()).padStart(2, '0');
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const year = selectedDate.getFullYear();
+            const formattedDate = `${day}/${month}/${year}`;
+            setDocs(prev => ({ ...prev, [showDatePicker]: formattedDate }));
+        }
+        if (Platform.OS === 'ios' && event.type === 'set') {
+            setShowDatePicker(null);
+        }
+    };
 
     const pickDocument = async (field: keyof typeof docs) => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -74,7 +92,7 @@ const DocumentUploadScreen = () => {
     };
 
     const handleNext = () => {
-        if (!docs.insuranceUrl || !docs.inspectionUrl || !docs.logbookUrl || !docs.carImageUrl) {
+        if (!docs.insuranceUrl || !docs.inspectionUrl || !docs.carRegistrationUrl || !docs.carImageUrl) {
             Alert.alert('Missing Documents', 'Please upload all required documents to proceed');
             return;
         }
@@ -85,7 +103,7 @@ const DocumentUploadScreen = () => {
         <View style={styles.docItem}>
             <View style={styles.docMain}>
                 <View style={[styles.numberCircle, value && styles.numberCircleCompleted]}>
-                    <Text style={[styles.numberText, value && styles.numberTextCompleted]}>{index}</Text>
+                    {value ? <CheckCircle size={20} color="#3182CE" /> : <Text style={[styles.numberText, value && styles.numberTextCompleted]}>{index}</Text>}
                 </View>
                 <View style={styles.docInfo}>
                     <Text style={styles.docTitle}>{title}</Text>
@@ -95,13 +113,10 @@ const DocumentUploadScreen = () => {
                     {expiryField && (
                         <View style={styles.expiryRow}>
                             <Text style={styles.expireLabel}>Expire on* :</Text>
-                            <TouchableOpacity style={styles.datePicker}>
-                                <TextInput
-                                    style={styles.dateInput}
-                                    placeholder="DD/MM/YYYY"
-                                    value={expiryValue}
-                                    onChangeText={(text) => setDocs(prev => ({ ...prev, [expiryField]: text }))}
-                                />
+                            <TouchableOpacity style={styles.datePicker} onPress={() => setShowDatePicker(expiryField as keyof typeof docs)}>
+                                <Text style={[styles.dateInput, !expiryValue && { color: '#9B9B9B' }]}>
+                                    {expiryValue || "DD/MM/YYYY"}
+                                </Text>
                                 <Calendar size={18} color="#666" />
                             </TouchableOpacity>
                         </View>
@@ -115,6 +130,11 @@ const DocumentUploadScreen = () => {
             >
                 {uploading === field ? (
                     <ActivityIndicator size="small" color="#007AFF" />
+                ) : value ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#EBF5FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 }}>
+                        <CheckCircle size={14} color="#3182CE" style={{ marginRight: 4 }} />
+                        <Text style={{ color: '#3182CE', fontSize: 13, fontWeight: '600' }}>Uploaded</Text>
+                    </View>
                 ) : (
                     <Upload size={24} color="#1A1A1A" />
                 )}
@@ -126,7 +146,7 @@ const DocumentUploadScreen = () => {
         <View style={[styles.container, { backgroundColor: '#fff' }]}>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('IdentityDocuments')} style={styles.backButton}>
                         <ChevronLeft size={28} color="#1A1A1A" />
                     </TouchableOpacity>
                     <Text style={styles.title}>Vehicle Documents</Text>
@@ -153,8 +173,8 @@ const DocumentUploadScreen = () => {
                     <DocumentItem
                         index={3}
                         title="Log Book or Sale Agreement"
-                        field="logbookUrl"
-                        value={docs.logbookUrl}
+                        field="carRegistrationUrl"
+                        value={docs.carRegistrationUrl}
                     />
                     <DocumentItem
                         index={4}
@@ -168,6 +188,16 @@ const DocumentUploadScreen = () => {
                     <Text style={styles.submitBtnText}>SUBMIT</Text>
                 </TouchableOpacity>
             </ScrollView>
+
+            {showDatePicker && (
+                <DateTimePicker
+                    value={docs[showDatePicker] ? new Date(docs[showDatePicker].split('/').reverse().join('-')) : new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={onDateChange}
+                    minimumDate={new Date()}
+                />
+            )}
         </View>
     );
 };

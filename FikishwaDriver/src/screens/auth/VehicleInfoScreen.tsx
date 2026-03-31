@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert,
 import { useAuthStore } from '../../store/useAuthStore';
 import api from '../../services/api';
 import driverApiService from '../../services/driverApiService';
+import { CAR_BRANDS_AND_MODELS, CAR_BRANDS } from '../../constants/vehicles';
 import {
     Car, Tag, Calendar, Layout, Camera, ArrowRight,
     CheckCircle, ChevronLeft, Info, Check, User
@@ -25,14 +26,20 @@ const VehicleInfoScreen = () => {
     const [color, setColor] = useState('');
     const [taxiNumber, setTaxiNumber] = useState('');
     const [isTaxi, setIsTaxi] = useState(false);
-    const [carImageUrl, setCarImageUrl] = useState(user?.carImageUrl || null);
-    const [logbookUrl, setLogbookUrl] = useState(user?.carRegistrationUrl || null);
+    const [profilePhotoUrl, setProfilePhotoUrl] = useState((user as any)?.profilePhotoUrl || null);
 
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState<string | null>(null);
     const [showTooltip, setShowTooltip] = useState(true);
 
-    const pickImage = async (field: 'carImageUrl' | 'carRegistrationUrl') => {
+    const [showMakeSuggestions, setShowMakeSuggestions] = useState(false);
+    const [showModelSuggestions, setShowModelSuggestions] = useState(false);
+
+    const filteredMakes = make ? CAR_BRANDS.filter(b => b.toLowerCase().includes(make.toLowerCase())) : CAR_BRANDS;
+    const availableModels = CAR_BRANDS_AND_MODELS[make] || [];
+    const filteredModels = model ? availableModels.filter(m => m.toLowerCase().includes(model.toLowerCase())) : availableModels;
+
+    const pickImage = async (field: 'profilePhotoUrl') => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
             allowsEditing: true,
@@ -58,21 +65,20 @@ const VehicleInfoScreen = () => {
 
             if (response.data.success) {
                 const url = response.data.imageUrl;
-                if (field === 'carImageUrl') setCarImageUrl(url);
-                else setLogbookUrl(url);
+                if (field === 'profilePhotoUrl') setProfilePhotoUrl(url);
 
                 await driverApiService.updateProfile({ [field]: url });
             }
         } catch (error) {
-            Alert.alert('Upload Failed', 'Failed to upload vehicle image');
+            Alert.alert('Upload Failed', 'Failed to upload profile photo');
         } finally {
             setUploading(null);
         }
     };
 
     const handleSubmit = async () => {
-        if (!make || !model || !year || !plate || !carImageUrl) {
-            Alert.alert('Error', 'Please provide all required vehicle details and photos');
+        if (!make || !model || !year || !plate || !profilePhotoUrl) {
+            Alert.alert('Error', 'Please provide all required vehicle details and a profile photo');
             return;
         }
 
@@ -85,8 +91,7 @@ const VehicleInfoScreen = () => {
                 plateNumber: plate,
                 color,
                 taxiNumber: isTaxi ? taxiNumber : null,
-                carImageUrl,
-                carRegistrationUrl: logbookUrl
+                profilePhotoUrl
             });
 
             if (response.data.success) {
@@ -108,7 +113,7 @@ const VehicleInfoScreen = () => {
             style={styles.container}
         >
             <View style={styles.topNav}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('DocumentUpload')} style={styles.backButton}>
                     <ChevronLeft size={28} color="#1A1A1A" />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => navigation.navigate('StatusPending')}>
@@ -126,9 +131,9 @@ const VehicleInfoScreen = () => {
                 </View>
 
                 <View style={styles.photoContainer}>
-                    <TouchableOpacity style={styles.avatarContainer} onPress={() => pickImage('carImageUrl')}>
-                        {carImageUrl ? (
-                            <RNImage source={{ uri: carImageUrl }} style={styles.avatarImg} />
+                    <TouchableOpacity style={styles.avatarContainer} onPress={() => pickImage('profilePhotoUrl')}>
+                        {profilePhotoUrl ? (
+                            <RNImage source={{ uri: profilePhotoUrl }} style={styles.avatarImg} />
                         ) : (
                             <View style={styles.avatarPlaceholder}>
                                 <User size={32} color="#666" />
@@ -138,7 +143,7 @@ const VehicleInfoScreen = () => {
                             <Camera size={16} color="#666" />
                         </View>
                     </TouchableOpacity>
-                    <Text style={styles.addPhotoText}>Add Photo</Text>
+                    <Text style={styles.addPhotoText}>Add Profile Photo</Text>
                     <TouchableOpacity onPress={() => setShowTooltip(!showTooltip)} style={{ padding: 4 }}>
                         <Info size={20} color="#007AFF" />
                     </TouchableOpacity>
@@ -147,7 +152,7 @@ const VehicleInfoScreen = () => {
                         <View style={styles.tooltip}>
                             <View style={styles.tooltipArrow} />
                             <Text style={styles.tooltipText}>
-                                Vehicle image must be a front photo with number plate displayed.
+                                Please provide a clear profile photo for your driver account.
                             </Text>
                         </View>
                     )}
@@ -157,17 +162,60 @@ const VehicleInfoScreen = () => {
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Brand (Auto Suggestion)</Text>
                         <View style={styles.dropdownContainer}>
-                            <TextInput style={styles.input} placeholder="Select Brand" value={make} onChangeText={setMake} />
-                            <ChevronLeft size={20} color="#666" style={{ transform: [{ rotate: '-90deg' }] }} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Select Brand"
+                                value={make}
+                                onChangeText={(text) => { setMake(text); setShowMakeSuggestions(true); setModel(''); }}
+                                onFocus={() => setShowMakeSuggestions(true)}
+                            />
+                            <ChevronLeft size={20} color="#666" style={{ transform: [{ rotate: showMakeSuggestions ? '90deg' : '-90deg' }] }} />
                         </View>
+                        {showMakeSuggestions && (
+                            <View style={styles.suggestionsContainer}>
+                                <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={{ maxHeight: 150 }}>
+                                    {filteredMakes.map(item => (
+                                        <TouchableOpacity
+                                            key={item}
+                                            style={styles.suggestionItem}
+                                            onPress={() => { setMake(item); setShowMakeSuggestions(false); setModel(''); }}
+                                        >
+                                            <Text style={styles.suggestionText}>{item}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Model (Auto suggestion) *</Text>
                         <View style={styles.dropdownContainer}>
-                            <TextInput style={styles.input} placeholder="Select Model" value={model} onChangeText={setModel} />
-                            <ChevronLeft size={20} color="#666" style={{ transform: [{ rotate: '-90deg' }] }} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Select Model"
+                                value={model}
+                                onChangeText={(text) => { setModel(text); setShowModelSuggestions(true); }}
+                                onFocus={() => setShowModelSuggestions(true)}
+                                editable={!!make}
+                            />
+                            <ChevronLeft size={20} color="#666" style={{ transform: [{ rotate: showModelSuggestions ? '90deg' : '-90deg' }] }} />
                         </View>
+                        {showModelSuggestions && make && availableModels.length > 0 && (
+                            <View style={styles.suggestionsContainer}>
+                                <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={{ maxHeight: 150 }}>
+                                    {filteredModels.map(item => (
+                                        <TouchableOpacity
+                                            key={item}
+                                            style={styles.suggestionItem}
+                                            onPress={() => { setModel(item); setShowModelSuggestions(false); }}
+                                        >
+                                            <Text style={styles.suggestionText}>{item}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.inputGroup}>
@@ -239,6 +287,9 @@ const styles = StyleSheet.create({
     label: { fontSize: 16, fontWeight: '500', color: '#334155' },
     dropdownContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, paddingRight: 16 },
     input: { flex: 1, backgroundColor: '#F8FAFC', borderRadius: 12, paddingHorizontal: 16, height: 56, fontSize: 16, color: '#1E293B' },
+    suggestionsContainer: { backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', marginTop: 4, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, overflow: 'hidden' },
+    suggestionItem: { paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    suggestionText: { fontSize: 16, color: '#334155' },
     taxiRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     checkbox: { width: 28, height: 28, borderRadius: 4, borderWidth: 2, borderColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center' },
     checkboxActive: { backgroundColor: '#007AFF', borderColor: '#007AFF' },

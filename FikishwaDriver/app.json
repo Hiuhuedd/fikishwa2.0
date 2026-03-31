@@ -16,6 +16,7 @@
     },
     "android": {
       "package": "com.fikishwa.driver",
+      "usesCleartextTraffic": true,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyCTC78aB0ukv5ERXLwBM_tyiFIy13697wc"
@@ -24,6 +25,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker"
+    ]
   }
 }

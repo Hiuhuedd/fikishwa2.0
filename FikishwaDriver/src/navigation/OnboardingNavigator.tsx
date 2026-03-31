@@ -1,6 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import PersonalDetailsScreen from '../screens/Auth/PersonalDetailsScreen';
+import IdentityDocumentsScreen from '../screens/Auth/IdentityDocumentScreen';
 import DocumentUploadScreen from '../screens/Auth/DocumentUploadScreen';
 import VehicleInfoScreen from '../screens/Auth/VehicleInfoScreen';
 import StatusPendingScreen from '../screens/Auth/StatusPendingScreen';
@@ -8,6 +9,7 @@ import { useAuthStore } from '../store/useAuthStore';
 
 export type OnboardingStackParamList = {
     PersonalDetails: undefined;
+    IdentityDocuments: undefined;
     DocumentUpload: undefined;
     VehicleInfo: undefined;
     StatusPending: undefined;
@@ -24,8 +26,9 @@ export const OnboardingNavigator = () => {
             return 'StatusPending';
         }
         if (!user?.name) return 'PersonalDetails';
+        if (!user?.licenseUrl) return 'IdentityDocuments';
+        if (!user?.carImageUrl) return 'DocumentUpload';
         if (!user?.carMake) return 'VehicleInfo';
-        if (!user?.licenseUrl) return 'DocumentUpload';
         return 'StatusPending';
     };
 
@@ -35,6 +38,7 @@ export const OnboardingNavigator = () => {
             screenOptions={{ headerShown: false }}
         >
             <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
+            <Stack.Screen name="IdentityDocuments" component={IdentityDocumentsScreen} />
             <Stack.Screen name="DocumentUpload" component={DocumentUploadScreen} />
             <Stack.Screen name="VehicleInfo" component={VehicleInfoScreen} />
             <Stack.Screen name="StatusPending" component={StatusPendingScreen} />

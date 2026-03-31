@@ -20,16 +20,21 @@ exports.goOnline = async (req, res) => {
 
     try {
         // Strict Onboarding Gating
+        console.log(`🔍 [GoOnline] Fetching driver doc for ${driverId}...`);
         const driverRef = doc(db, 'drivers', driverId);
         const driverDoc = await getDoc(driverRef);
+        console.log(`🔍 [GoOnline] Doc exists: ${driverDoc.exists()}`);
 
         if (!driverDoc.exists()) {
+            console.error(`🔍 [GoOnline] Driver ${driverId} not found in Firestore.`);
             return res.status(404).json({ success: false, error: 'Driver not found' });
         }
 
         const data = driverDoc.data();
+        console.log(`🔍 [GoOnline] Current status: ${data.registrationStatus}`);
         const allowedStatuses = ['approved', 'pending', 'pending_review'];
         if (!allowedStatuses.includes(data.registrationStatus)) {
+            console.warn(`🔍 [GoOnline] Forbidden status: ${data.registrationStatus}`);
             return res.status(403).json({
                 success: false,
                 error: 'FORBIDDEN',
@@ -39,8 +44,10 @@ exports.goOnline = async (req, res) => {
 
         // Use the driver's primary vehicleType or their first approved category
         let category = data.vehicleType || (data.approvedCategories && data.approvedCategories.length > 0 ? data.approvedCategories[0] : 'standard');
+        console.log(`🔍 [GoOnline] Using category: ${category}`);
 
         const geohash = ngeohash.encode(location.lat, location.lng, 6);
+        console.log(`🔍 [GoOnline] Writing to activeDrivers...`);
         await setDoc(doc(db, 'activeDrivers', driverId), {
             driverId,
             online: true,
@@ -50,6 +57,7 @@ exports.goOnline = async (req, res) => {
             geohash,
             lastSeenAt: serverTimestamp()
         });
+        console.log(`🔍 [GoOnline] Active status written successfully.`);
 
         // 2. Look for existing pending requests nearby for this category
         const matchingService = require('../services/matchingService');
