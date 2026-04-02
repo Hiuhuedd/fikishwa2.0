@@ -7,7 +7,8 @@ export const USER_KEY = '@fikishwa_driver_user';
 
 // API Configuration
 // Update this with your actual backend URL
-export const API_BASE_URL = 'http://192.168.100.6:3000';
+export const API_BASE_URL = "https://fikishwa2-0-backend.onrender.com"
+
 
 // Create axios instance
 const api = axios.create({
@@ -19,7 +20,9 @@ const api = axios.create({
 api.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
         const fullUrl = `${config.baseURL}${config.url}`;
-        console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${fullUrl}`);
+        if (__DEV__) {
+            console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${fullUrl}`);
+        }
 
         try {
             const token = await AsyncStorage.getItem(TOKEN_KEY);
@@ -40,9 +43,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
-        console.error(`🔴 API Error: ${error.message} | URL: ${error.config?.url} | Status: ${error.response?.status}`);
-        if (error.response) {
-            console.error(`📋 Data:`, JSON.stringify(error.response.data));
+        if (__DEV__) {
+            console.error(`🔴 API Error: ${error.message} | URL: ${error.config?.url} | Status: ${error.response?.status}`);
+            if (error.response) {
+                console.error(`📋 Data:`, JSON.stringify(error.response.data));
+            }
         }
 
         if (error.response?.status === 401) {

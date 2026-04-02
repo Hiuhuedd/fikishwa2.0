@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Alert, ActivityIndicator, Modal, Image as RNImage } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Alert, ActivityIndicator, Modal, Image as RNImage, Linking } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Menu, User, Power, MapPin, Navigation, ShieldCheck, Gift, ChevronRight, X } from 'lucide-react-native';
@@ -374,7 +374,16 @@ const HomeScreen = () => {
             setIsCanceling(false);
         }
     };
-
+    const handleCallCustomer = () => {
+        const phone = activeRide?.customerPhone || activeRide?.customer?.phone || activeRide?.customer?.phoneNumber || activeRide?.phoneNumber;
+        if (!phone) {
+            Alert.alert('Error', 'Customer phone number is not available.');
+            return;
+        }
+        Linking.openURL(`tel:${phone}`).catch(() => {
+            Alert.alert('Error', 'Could not open the phone dialer.');
+        });
+    };
 
 
     return (
@@ -414,7 +423,7 @@ const HomeScreen = () => {
                             user={user}
                             todayEarnings={todayEarnings}
                             onShowCancelModal={() => setShowCancelModal(true)}
-                            onCallCustomer={() => Alert.alert('Call', 'Coming soon')}
+                            onCallCustomer={handleCallCustomer}
                             onNavigateToEarnings={() => (navigation as any).navigate('Earnings')}
                             onNavigateToReferral={() => (navigation as any).navigate('Referral')}
                         />

@@ -269,7 +269,7 @@ const LocationSearchScreen = () => {
 
             {/* Confirm button */}
             {dropoff.length > 2 && (
-                <View style={[styles.confirmBar, { backgroundColor: colors.backgroundCard, borderTopColor: colors.border, paddingHorizontal: spacing.screenPadding }]}>
+                <View style={[styles.confirmBar, { backgroundColor: colors.backgroundCard }]}>
                     <TouchableOpacity
                         style={[styles.confirmBtn, { backgroundColor: colors.primary }]}
                         onPress={() => {
@@ -313,8 +313,9 @@ const styles = StyleSheet.create({
     },
     placeName: { fontWeight: '600', marginBottom: 2 },
     confirmBar: {
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        paddingVertical: 14, borderTopWidth: 1,
+        position: 'absolute', bottom: 40, left: 20, right: 20,
+        padding: 16, borderRadius: 24, borderTopWidth: 0,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
     },
     confirmBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
     suggestionItem: {

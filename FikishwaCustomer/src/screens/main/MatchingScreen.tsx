@@ -58,14 +58,6 @@ const MatchingScreen = () => {
             setDriverData(driver);
             setStatusText('Driver found!');
             setShowDriverDetails(true);
-
-            // Auto-redirect after 5 seconds to ensure the user isn't stuck
-            if (!redirectTimer) {
-                redirectTimer = setTimeout(() => {
-                    console.log('⏱️ [Matching] Auto-redirecting to ActiveRide...');
-                    handleProceedToRide();
-                }, 5000);
-            }
         };
 
         const handleStatusUpdate = (data: any) => {
