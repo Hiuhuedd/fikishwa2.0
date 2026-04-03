@@ -9,33 +9,16 @@ class SMSService {
 
         // General config
         this.config = {
-            provider: process.env.SMS_PROVIDER || 'africastalking', // 'textsms' or 'africastalking'
+            provider: process.env.SMS_PROVIDER || 'textsms',
 
             // TextSMS
             textSmsApiKey: process.env.TEXTSMS_API_KEY,
             textSmsPartnerID: process.env.TEXTSMS_PARTNER_ID,
             textSmsShortcode: process.env.TEXTSMS_SENDER_ID || 'TextSMS',
-            textSmsUrl: process.env.TEXTSMS_API_URL || 'https://sms.textsms.co.ke/api/services/sendsms/',
-
-            // Africa's Talking
-            atUsername: process.env.AT_USERNAME || 'sandbox',
-            atApiKey: process.env.AT_API_KEY,
-            atSenderId: process.env.AT_SENDER_ID || null
+            textSmsUrl: process.env.TEXTSMS_API_URL || 'https://sms.textsms.co.ke/api/services/sendsms/'
         };
 
         console.log(`📋 SMS Service Configuration - Active Provider: [${this.config.provider.toUpperCase()}]`);
-
-        // Initialize Africa's Talking Native SDK
-        if (this.config.atApiKey) {
-            const credentials = { apiKey: this.config.atApiKey, username: this.config.atUsername };
-            try {
-                this.sms = require('africastalking')(credentials).SMS;
-            } catch (e) {
-                console.warn("⚠️ Africa's Talking Initialization failed:", e.message);
-            }
-        } else {
-            console.warn("⚠️ Africa's Talking API Key not found");
-        }
 
         if (!this.config.textSmsApiKey) {
             console.warn("⚠️ TextSMS API Key not found");
@@ -63,42 +46,19 @@ class SMSService {
         }
 
         try {
-            if (this.config.provider === 'africastalking') {
-                if (!this.sms) throw new Error("Africa's Talking SDK not initialized");
-
-                console.log(`📨 Sending SMS to +${normalizedPhone} [Category: ${category}] via Africa's Talking`);
-                const options = {
-                    to: [`+${normalizedPhone}`],
-                    message: message,
-                };
-                if (this.config.atSenderId && this.config.atUsername !== 'sandbox') {
-                    options.from = this.config.atSenderId;
-                }
-                const response = await this.sms.send(options);
-                apiResponse = response;
-                const recipientData = response?.SMSMessageData?.Recipients?.[0];
-                if (recipientData && recipientData.status === 'Success') {
-                    status = 'success';
-                    console.log('✅ SMS sent successfully via AT:', response);
-                } else {
-                    console.warn('⚠️ AT SMS partial failure or rejection:', response);
-                }
-
-            } else {
-                // Fallback to TextSMS
-                console.log(`📨 Sending SMS to ${normalizedPhone} [Category: ${category}] via TextSMS`);
-                const payload = {
-                    apikey: this.config.textSmsApiKey,
-                    partnerID: this.config.textSmsPartnerID,
-                    message: message,
-                    shortcode: this.config.textSmsShortcode,
-                    mobile: normalizedPhone
-                };
-                const response = await axios.post(this.config.textSmsUrl, payload);
-                apiResponse = response.data;
-                status = 'success';
-                console.log('✅ SMS sent successfully via TextSMS:', apiResponse);
-            }
+            // TextSMS API implementation
+            console.log(`📨 Sending SMS to ${normalizedPhone} [Category: ${category}] via TextSMS`);
+            const payload = {
+                apikey: this.config.textSmsApiKey,
+                partnerID: this.config.textSmsPartnerID,
+                message: message,
+                shortcode: this.config.textSmsShortcode,
+                mobile: normalizedPhone
+            };
+            const response = await axios.post(this.config.textSmsUrl, payload);
+            apiResponse = response.data;
+            status = 'success';
+            console.log('✅ SMS sent successfully via TextSMS:', apiResponse);
         } catch (error) {
             console.error('❌ SMS send failed:', error.message);
             errorMsg = error.message;

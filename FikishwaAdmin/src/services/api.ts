@@ -12,7 +12,7 @@ export const USER_KEY = '@fikishwa_admin_user';
 
 // API Configuration
 // Using the development server IP
-const API_BASE_URL = 'http://192.168.100.6:3000';
+const API_BASE_URL = 'https://fikishwa2-0-backend.onrender.com';
 
 // Create axios instance
 const api = axios.create({

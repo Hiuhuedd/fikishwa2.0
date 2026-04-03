@@ -2,14 +2,26 @@ const nodemailer = require('nodemailer');
 
 class EmailService {
     constructor() {
+        const port = parseInt(process.env.SMTP_PORT) || 587;
+        const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+
+        console.log(`📧 Initializing Email Service with host: ${host}, port: ${port}`);
+
         this.transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'smtp.gmail.com',
-            port: parseInt(process.env.SMTP_PORT) || 465,
-            secure: (parseInt(process.env.SMTP_PORT) === 465), // true for 465, false for other ports
+            host,
+            port,
+            secure: port === 465, // true for 465 (SSL), false for 587 (STARTTLS)
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS,
             },
+            tls: {
+                // Do not fail on invalid certificates (useful for some SMTP providers)
+                rejectUnauthorized: false
+            },
+            connectionTimeout: 10000, // 10 seconds
+            greetingTimeout: 10000,   // 10 seconds
+            socketTimeout: 20000      // 20 seconds
         });
 
         console.log('📧 Email Service Initialized (SMTP)');
