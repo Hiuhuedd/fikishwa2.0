@@ -28,6 +28,7 @@ const DocumentUploadScreen = () => {
         carImageUrl: user?.carImageUrl || null,
     });
     const [uploading, setUploading] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState<keyof typeof docs | null>(null);
 
     const onDateChange = (event: any, selectedDate?: Date) => {
@@ -91,25 +92,27 @@ const DocumentUploadScreen = () => {
         }
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (!docs.insuranceUrl || !docs.inspectionUrl || !docs.carRegistrationUrl || !docs.carImageUrl) {
             Alert.alert('Missing Documents', 'Please upload all required documents to proceed');
             return;
         }
-        navigation.navigate('VehicleInfo');
+        setLoading(true);
+        setTimeout(() => {
+            setLoading(false);
+            navigation.navigate('VehicleInfo');
+        }, 800);
     };
 
     const DocumentItem = ({ index, title, field, value, expiryField, expiryValue }: { index: number, title: string, field: keyof typeof docs, value: string | null, expiryField?: keyof typeof docs, expiryValue?: string }) => (
         <View style={styles.docItem}>
             <View style={styles.docMain}>
                 <View style={[styles.numberCircle, value && styles.numberCircleCompleted]}>
-                    {value ? <CheckCircle size={20} color="#3182CE" /> : <Text style={[styles.numberText, value && styles.numberTextCompleted]}>{index}</Text>}
+                    {value ? <CheckCircle size={20} color="#001C3D" /> : <Text style={[styles.numberText, value && styles.numberTextCompleted]}>{index}</Text>}
                 </View>
                 <View style={styles.docInfo}>
                     <Text style={styles.docTitle}>{title}</Text>
-                    <TouchableOpacity>
-                        <Text style={styles.knowMore}>Know more</Text>
-                    </TouchableOpacity>
+
                     {expiryField && (
                         <View style={styles.expiryRow}>
                             <Text style={styles.expireLabel}>Expire on* :</Text>
@@ -129,11 +132,11 @@ const DocumentUploadScreen = () => {
                 disabled={uploading === field}
             >
                 {uploading === field ? (
-                    <ActivityIndicator size="small" color="#007AFF" />
+                    <ActivityIndicator size="small" color="#001C3D" />
                 ) : value ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#EBF5FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 }}>
-                        <CheckCircle size={14} color="#3182CE" style={{ marginRight: 4 }} />
-                        <Text style={{ color: '#3182CE', fontSize: 13, fontWeight: '600' }}>Uploaded</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E6F0FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 }}>
+                        <CheckCircle size={14} color="#001C3D" style={{ marginRight: 4 }} />
+                        <Text style={{ color: '#001C3D', fontSize: 13, fontWeight: '600' }}>Uploaded</Text>
                     </View>
                 ) : (
                     <Upload size={24} color="#1A1A1A" />
@@ -146,10 +149,13 @@ const DocumentUploadScreen = () => {
         <View style={[styles.container, { backgroundColor: '#fff' }]}>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('IdentityDocuments')} style={styles.backButton}>
-                        <ChevronLeft size={28} color="#1A1A1A" />
-                    </TouchableOpacity>
-                    <Text style={styles.title}>Vehicle Documents</Text>
+                    <View style={styles.titleRow}>
+                        <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('IdentityDocuments')} style={styles.backButton}>
+                            <ChevronLeft size={28} color="#1A1A1A" />
+                        </TouchableOpacity>
+                        <Text style={styles.title}>Vehicle Documents</Text>
+                        <Text style={styles.stepIndicator}>3/4</Text>
+                    </View>
                     <Text style={styles.subtitle}>For verification, Upload your Vehicle documents</Text>
                 </View>
 
@@ -184,8 +190,15 @@ const DocumentUploadScreen = () => {
                     />
                 </View>
 
-                <TouchableOpacity style={styles.submitBtn} onPress={handleNext}>
-                    <Text style={styles.submitBtnText}>SUBMIT</Text>
+                <TouchableOpacity style={styles.submitBtn} onPress={handleNext} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <>
+                            <Text style={styles.submitBtnText}>CONTINUE</Text>
+                            <ArrowRight size={20} color="#fff" style={{ marginLeft: 8 }} />
+                        </>
+                    )}
                 </TouchableOpacity>
             </ScrollView>
 
@@ -205,27 +218,54 @@ const DocumentUploadScreen = () => {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     scrollContainer: { padding: 24, paddingBottom: 40 },
-    header: { marginTop: 20, marginBottom: 32 },
-    backButton: { marginBottom: 20, marginLeft: -4 },
-    title: { fontSize: 32, fontWeight: '500', color: '#4A4A4A', letterSpacing: -0.5 },
-    subtitle: { fontSize: 16, color: '#9B9B9B', marginTop: 8 },
+    header: {
+        marginTop: 24,
+        marginBottom: 24,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    backButton: {
+        marginLeft: -12,
+        marginRight: 4,
+        padding: 4,
+    },
+    title: {
+        flex: 1,
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#1E293B',
+        letterSpacing: -0.5,
+    },
+    stepIndicator: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#64748B',
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#64748B',
+        fontWeight: '500',
+    },
     docList: { gap: 24, marginBottom: 40 },
     docItem: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
     docMain: { flexDirection: 'row', flex: 1, gap: 16 },
-    numberCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFF0F0', justifyContent: 'center', alignItems: 'center' },
-    numberCircleCompleted: { backgroundColor: '#EBF5FF' },
-    numberText: { fontSize: 16, fontWeight: '600', color: '#E53E3E' },
-    numberTextCompleted: { color: '#3182CE' },
+    numberCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
+    numberCircleCompleted: { backgroundColor: '#E6F0FF' },
+    numberText: { fontSize: 16, fontWeight: '600', color: '#64748B' },
+    numberTextCompleted: { color: '#001C3D' },
     docInfo: { flex: 1 },
-    docTitle: { fontSize: 18, color: '#4A4A4A', fontWeight: '500' },
-    knowMore: { fontSize: 14, color: '#3182CE', marginTop: 4 },
+    docTitle: { fontSize: 18, color: '#1E293B', fontWeight: '700' },
+    knowMore: { fontSize: 14, color: '#001C3D', marginTop: 4 },
     expiryRow: { marginTop: 12 },
-    expireLabel: { fontSize: 14, color: '#9B9B9B', fontWeight: '500' },
+    expireLabel: { fontSize: 14, color: '#94A3B8', fontWeight: '500' },
     datePicker: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
-    dateInput: { fontSize: 16, color: '#4A4A4A', padding: 0 },
+    dateInput: { fontSize: 16, color: '#1E293B', padding: 0 },
     uploadBtnAction: { padding: 8 },
-    submitBtn: { height: 64, backgroundColor: '#AC8E92', borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginTop: 'auto' },
-    submitBtnText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 1 },
+    submitBtn: { height: 56, backgroundColor: '#001C3D', borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 'auto' },
+    submitBtnText: { color: '#fff', fontSize: 18, fontWeight: '600' },
 });
 
 export default DocumentUploadScreen;

@@ -34,6 +34,7 @@ interface AuthState {
     user: User | null;
     token: string | null;
     phoneNumber: string | null;
+    lastIdentifier: string | null;
     sessionId: string | null;
     isLoading: boolean;
     error: string | null;
@@ -44,22 +45,31 @@ interface AuthState {
     initialize: () => Promise<void>;
 }
 
+const LAST_ID_KEY = 'last_identifier';
+
 export const useAuthStore = create<AuthState>((set) => ({
     user: null,
     token: null,
     phoneNumber: null,
+    lastIdentifier: null,
     sessionId: null,
     isLoading: true,
     error: null,
 
-    setPhoneNumber: (phoneNumber) => set({ phoneNumber }),
+    setPhoneNumber: (phoneNumber) => {
+        set({ phoneNumber });
+        AsyncStorage.setItem(LAST_ID_KEY, phoneNumber);
+    },
     setSessionId: (sessionId) => set({ sessionId }),
 
     setAuth: async (user, token) => {
         try {
             await AsyncStorage.setItem(TOKEN_KEY, token);
             await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
-            set({ user, token, isLoading: false, error: null });
+            // Also ensure the identifier is saved
+            const id = user.email || user.phone;
+            if (id) await AsyncStorage.setItem(LAST_ID_KEY, id);
+            set({ user, token, lastIdentifier: id || null, isLoading: false, error: null });
         } catch (error) {
             console.error('Error saving auth state:', error);
             set({ error: 'Failed to save login session' });
@@ -79,6 +89,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         try {
             const token = await AsyncStorage.getItem(TOKEN_KEY);
             const userJson = await AsyncStorage.getItem(USER_KEY);
+            const lastId = await AsyncStorage.getItem(LAST_ID_KEY);
+
+            set({ lastIdentifier: lastId });
+
             if (token && userJson) {
                 set({ user: JSON.parse(userJson), token, isLoading: false });
             } else {

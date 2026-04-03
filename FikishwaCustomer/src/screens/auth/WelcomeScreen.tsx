@@ -20,7 +20,7 @@ const WelcomeScreen = () => {
                 {/* Illustration */}
                 <View style={styles.imageContainer}>
                     <Image
-                        source={require('../../assets/images/welcome_illustration.jpg')}
+                        source={require('../../assets/images/welcome_illustration.png')}
                         style={styles.image}
                         resizeMode="contain"
                     />
@@ -28,9 +28,9 @@ const WelcomeScreen = () => {
 
                 {/* Text Content */}
                 <View style={styles.textContainer}>
-                    <Text style={[styles.title, { color: colors.textPrimary }]}>Book a ride</Text>
+                    <Text style={[styles.title, { color: colors.textPrimary }]}>Premium Ride Experience</Text>
                     <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                        Your personal e-hailing experience with us.
+                        Elegance and comfort at your fingertips. Discover the new standard of e-hailing with Fikishwa.
                     </Text>
                 </View>
             </View>
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
         opacity: 0.7,
     },
     footer: {
-        paddingBottom: 40,
+        paddingBottom: 70,
         gap: 16,
         flexDirection: 'row',
     },

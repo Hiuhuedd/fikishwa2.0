@@ -1,45 +1,76 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
     StatusBar, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
-import api from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 import customerApiService from '../../services/customerApiService';
-import { API_ENDPOINTS } from '../../config/api';
-import { Phone, ChevronLeft } from 'lucide-react-native';
+import { Phone, Mail, ChevronLeft } from 'lucide-react-native';
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const PhoneLoginScreen = () => {
     const navigation = useNavigation<any>();
     const { colors, spacing, fontSizes } = useTheme();
-    const [phone, setPhone] = useState('');
+    const { lastIdentifier, saveIdentifier } = useAuthStore();
+
+    const [loginMode, setLoginMode] = useState<'phone' | 'email'>(lastIdentifier?.includes('@') || !lastIdentifier ? 'email' : 'phone');
+    const [identifier, setIdentifier] = useState(lastIdentifier || '');
     const [loading, setLoading] = useState(false);
 
+    // Update internal state when store initializes
+    useEffect(() => {
+        if (lastIdentifier && !identifier) {
+            setIdentifier(lastIdentifier);
+            setLoginMode(lastIdentifier.includes('@') ? 'email' : 'phone');
+        }
+    }, [lastIdentifier]);
+
     const handleSendOTP = async () => {
-        const cleaned = phone.replace(/\s/g, '');
-        if (cleaned.length < 9) {
-            Alert.alert('Invalid Number', 'Please enter a valid Kenyan phone number.');
+        const cleaned = identifier.trim();
+        if (cleaned.length < 5) {
+            Alert.alert('Invalid Entry', `Please enter a valid ${loginMode}.`);
             return;
         }
+
+        if (loginMode === 'email' && !emailRegex.test(cleaned)) {
+            Alert.alert('Invalid Email', 'Please enter a valid email address.');
+            return;
+        }
+
         setLoading(true);
         try {
-            const formatted = cleaned.startsWith('0')
-                ? '254' + cleaned.slice(1)
-                : cleaned.startsWith('+254')
-                    ? cleaned.slice(1)
-                    : cleaned.startsWith('254')
-                        ? cleaned
-                        : '254' + cleaned;
+            let formatted = cleaned;
+            if (loginMode === 'phone') {
+                // Normalize phone for Kenyan context
+                formatted = cleaned.startsWith('0')
+                    ? '254' + cleaned.slice(1)
+                    : cleaned.startsWith('+254')
+                        ? cleaned.slice(1)
+                        : cleaned.startsWith('254')
+                            ? cleaned
+                            : '254' + cleaned;
+            }
 
             const response = await customerApiService.sendOtp(formatted);
             const sessionId = response.data.data.sessionId;
+
+            // Persist the identifier for next time
+            await saveIdentifier(identifier);
+
             navigation.navigate('OTP', { phone: formatted, sessionId });
         } catch (err: any) {
             Alert.alert('Error', err.response?.data?.message || 'Failed to send OTP.');
         } finally {
             setLoading(false);
         }
+    };
+
+    const toggleMode = () => {
+        setLoginMode(loginMode === 'phone' ? 'email' : 'phone');
+        setIdentifier('');
     };
 
     return (
@@ -57,40 +88,61 @@ const PhoneLoginScreen = () => {
                 <View style={[styles.content, { paddingHorizontal: spacing.screenPadding }]}>
                     {/* Icon */}
                     <View style={[styles.iconWrap, { backgroundColor: colors.primary + '15' }]}>
-                        <Phone size={28} color={colors.primary} />
+                        {loginMode === 'email' ? (
+                            <Mail size={28} color={colors.primary} />
+                        ) : (
+                            <Phone size={28} color={colors.primary} />
+                        )}
                     </View>
 
-                    <Text style={[styles.title, { color: colors.textPrimary }]}>What's your number?</Text>
+                    <Text style={[styles.title, { color: colors.textPrimary }]}>
+                        {loginMode === 'email' ? 'Sign in with Email' : 'What\'s your number?'}
+                    </Text>
                     <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: fontSizes.md }]}>
                         We'll send a one-time code to verify your account.
                     </Text>
 
-                    {/* Phone Input */}
+                    {/* Input Container */}
                     <View style={[styles.inputContainer, { backgroundColor: colors.backgroundCard, borderColor: colors.border }]}>
-                        <Text style={[styles.dialCode, { color: colors.textSecondary, fontSize: fontSizes.lg }]}>🇰🇪 +254</Text>
-                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                        {loginMode === 'phone' && (
+                            <>
+                                <Text style={[styles.dialCode, { color: colors.textSecondary, fontSize: fontSizes.lg }]}>🇰🇪 +254</Text>
+                                <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                            </>
+                        )}
                         <TextInput
                             style={[styles.input, { color: colors.textPrimary, fontSize: fontSizes.xl }]}
-                            placeholder="7XX XXX XXX"
+                            placeholder={loginMode === 'email' ? "Enter Email" : "7XXXXXXXX"}
                             placeholderTextColor={colors.textTertiary}
-                            keyboardType="phone-pad"
-                            value={phone}
-                            onChangeText={setPhone}
-                            maxLength={12}
+                            keyboardType={loginMode === 'email' ? "email-address" : "phone-pad"}
+                            value={identifier}
+                            onChangeText={setIdentifier}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                             autoFocus
                         />
                     </View>
 
                     <TouchableOpacity
-                        style={[styles.btn, { backgroundColor: colors.primary, opacity: phone.length < 9 || loading ? 0.5 : 1 }]}
+                        style={[styles.btn, { backgroundColor: colors.primary, opacity: identifier.length < 5 || loading ? 0.5 : 1 }]}
                         onPress={handleSendOTP}
-                        disabled={phone.length < 9 || loading}
+                        disabled={identifier.length < 5 || loading}
                         activeOpacity={0.85}
                     >
                         {loading
                             ? <ActivityIndicator color="#fff" />
                             : <Text style={[styles.btnText, { fontSize: fontSizes.lg }]}>Send Code</Text>
                         }
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.modeToggle}
+                        onPress={toggleMode}
+                        disabled={loading}
+                    >
+                        <Text style={[styles.modeToggleText, { color: colors.primary }]}>
+                            {loginMode === 'phone' ? 'Proceed with Email' : 'Proceed with Phone'}
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
@@ -122,8 +174,17 @@ const styles = StyleSheet.create({
     dialCode: { fontWeight: '700', marginRight: 12 },
     divider: { width: 1, height: 24, marginRight: 12 },
     input: { flex: 1, fontWeight: '700', letterSpacing: 1, paddingVertical: 14 },
-    btn: { borderRadius: 16, paddingVertical: 17, alignItems: 'center', shadowColor: '#2563EB', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 6 },
+    btn: { borderRadius: 16, paddingVertical: 17, alignItems: 'center', shadowColor: '#001C3D', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 6 },
     btnText: { color: '#fff', fontWeight: '700', letterSpacing: 0.3 },
+    modeToggle: {
+        marginTop: 20,
+        alignItems: 'center',
+        paddingVertical: 12,
+    },
+    modeToggleText: {
+        fontSize: 16,
+        fontWeight: '700',
+    },
 });
 
 export default PhoneLoginScreen;

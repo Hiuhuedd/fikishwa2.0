@@ -16,6 +16,7 @@ const {
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const smsService = require('./smsService');
+const emailService = require('./emailService');
 
 class DriverAuthService {
     constructor() {
@@ -25,13 +26,15 @@ class DriverAuthService {
     }
 
     async sendOtp(phone, ipAddress) {
-        const normalizedPhone = smsService.normalizePhone(phone);
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
         const expiresAt = Timestamp.fromDate(new Date(Date.now() + 5 * 60 * 1000));
 
+        const isEmail = phone.includes('@');
+        const identifier = isEmail ? phone.trim().toLowerCase() : smsService.normalizePhone(phone);
+
         const docRef = await addDoc(collection(this.db, 'otpSessions'), {
-            phone: normalizedPhone,
+            phone: identifier,
             hashedOtp: hashedOtp,
             attempts: 0,
             expiresAt: expiresAt,
@@ -42,7 +45,21 @@ class DriverAuthService {
         const sessionId = docRef.id;
         const message = `Your Fikishwa Driver verification code is ${otp}. Valid for 5 minutes. Do not share.`;
 
-        await smsService.sendSMS(normalizedPhone, message, "system", "auth_otp_driver");
+        // Print the OTP explicitly in the console for development testing
+        console.log(`\n================================`);
+        console.log(`🔑 DEVELOPMENT OTP BYPASS:`);
+        console.log(`📱 Destination: ${identifier}`);
+        console.log(`🔢 Code:  ${otp}`);
+        console.log(`================================\n`);
+
+        // Send via Email if it is an email address
+        if (isEmail) {
+            console.log(`📨 Attempting Email delivery to ${identifier}...`);
+            await emailService.sendOtpEmail(identifier, otp);
+        } else {
+            // Default to SMS
+            await smsService.sendSMS(identifier, message, "system", "auth_otp_driver");
+        }
 
         return sessionId;
     }
@@ -75,11 +92,17 @@ class DriverAuthService {
         // OTP Valid
         await deleteDoc(sessionRef);
 
-        const phone = sessionData.phone;
+        const identifier = sessionData.phone;
+        const isEmail = identifier.includes('@');
 
         // Check if driver exists in Firestore
         const driversRef = collection(this.db, 'drivers');
-        const q = query(driversRef, where("phone", "==", phone));
+        let q;
+        if (isEmail) {
+            q = query(driversRef, where("email", "==", identifier));
+        } else {
+            q = query(driversRef, where("phone", "==", identifier));
+        }
         const querySnapshot = await getDocs(q);
 
         let uid;
@@ -101,15 +124,17 @@ class DriverAuthService {
             driverDocRef = doc(this.db, 'drivers', uid);
 
             // Initialize with default values for driver
-            await setDoc(driverDocRef, {
+            const userData = {
                 uid: uid,
-                phone: phone,
+                phone: isEmail ? '' : identifier,
+                email: isEmail ? identifier : '',
                 registrationStatus: 'pending',
                 isEnabled: false,
                 createdAt: Timestamp.now(),
                 lastLoginAt: Timestamp.now(),
                 role: 'driver'
-            });
+            };
+            await setDoc(driverDocRef, userData);
         }
 
         // Fetch final profile
@@ -118,7 +143,7 @@ class DriverAuthService {
 
         // Generate standard JWT with role: 'driver'
         const token = jwt.sign(
-            { uid: uid, phone: phone, role: 'driver' },
+            { uid: uid, identifier: identifier, role: 'driver' },
             this.jwtSecret,
             { expiresIn: this.jwtExpiresIn }
         );
@@ -143,6 +168,7 @@ class DriverAuthService {
         // Personal Information
         if (profileData.name) updatePayload.name = profileData.name;
         if (profileData.email) updatePayload.email = profileData.email;
+        if (profileData.phone) updatePayload.phone = profileData.phone;
         if (profileData.address) updatePayload.address = profileData.address;
 
         // Identification Documents (Cloudinary URLs)

@@ -1,8 +1,8 @@
 export const lightColors = {
-    primary: '#D69B1D',
-    primaryDark: '#B58215',
-    primaryLight: '#FDBE33',
-    secondary: '#D97706',
+    primary: '#001C3D',
+    primaryDark: '#00132B',
+    primaryLight: '#E6F0FF',
+    secondary: '#003366',
     background: '#FFFFFF',
     backgroundCard: '#F8FAFC',
     backgroundHover: '#F1F5F9',

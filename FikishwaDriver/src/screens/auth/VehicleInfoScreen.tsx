@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Image as RNImage } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Image as RNImage, Modal, FlatList } from 'react-native';
 import { useAuthStore } from '../../store/useAuthStore';
 import api from '../../services/api';
 import driverApiService from '../../services/driverApiService';
 import { CAR_BRANDS_AND_MODELS, CAR_BRANDS } from '../../constants/vehicles';
 import {
     Car, Tag, Calendar, Layout, Camera, ArrowRight,
-    CheckCircle, ChevronLeft, Info, Check, User
+    CheckCircle, ChevronLeft, Info, Check, User, X, Search
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
@@ -32,10 +32,22 @@ const VehicleInfoScreen = () => {
     const [uploading, setUploading] = useState<string | null>(null);
     const [showTooltip, setShowTooltip] = useState(true);
 
-    const [showMakeSuggestions, setShowMakeSuggestions] = useState(false);
-    const [showModelSuggestions, setShowModelSuggestions] = useState(false);
+    const [showMakeModal, setShowMakeModal] = useState(false);
+    const [makeSearch, setMakeSearch] = useState('');
+    const [showModelModal, setShowModelModal] = useState(false);
+    const [modelSearch, setModelSearch] = useState('');
 
-    const filteredMakes = make ? CAR_BRANDS.filter(b => b.toLowerCase().includes(make.toLowerCase())) : CAR_BRANDS;
+    const popularBrands = [
+        'Toyota', 'Nissan', 'Mazda', 'Honda', 'Isuzu', 'Mitsubishi',
+        'Subaru', 'Suzuki', 'Mercedes-Benz', 'BMW', 'Volkswagen',
+        'Ford', 'Hyundai', 'Kia', 'Land Rover', 'Audi', 'Lexus',
+        'Peugeot', 'Chevrolet', 'Hino', 'Scania'
+    ].sort();
+
+    const filteredMakes = makeSearch
+        ? popularBrands.filter(b => b.toLowerCase().includes(makeSearch.toLowerCase()))
+        : popularBrands;
+
     const availableModels = CAR_BRANDS_AND_MODELS[make] || [];
     const filteredModels = model ? availableModels.filter(m => m.toLowerCase().includes(model.toLowerCase())) : availableModels;
 
@@ -112,20 +124,15 @@ const VehicleInfoScreen = () => {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
         >
-            <View style={styles.topNav}>
-                <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('DocumentUpload')} style={styles.backButton}>
-                    <ChevronLeft size={28} color="#1A1A1A" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => navigation.navigate('StatusPending')}>
-                    <Text style={styles.skipText}>SKIP</Text>
-                </TouchableOpacity>
-            </View>
 
             <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
                 <View style={styles.header}>
                     <View style={styles.titleRow}>
+                        <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('DocumentUpload')} style={styles.backButton}>
+                            <ChevronLeft size={28} color="#1A1A1A" />
+                        </TouchableOpacity>
                         <Text style={styles.title}>Add Vehicle</Text>
-                        <Text style={styles.stepIndicator}>5/7</Text>
+                        <Text style={styles.stepIndicator}>4/4</Text>
                     </View>
                     <Text style={styles.subtitle}>Enter your Vehicle Details</Text>
                 </View>
@@ -135,17 +142,17 @@ const VehicleInfoScreen = () => {
                         {profilePhotoUrl ? (
                             <RNImage source={{ uri: profilePhotoUrl }} style={styles.avatarImg} />
                         ) : (
-                            <View style={styles.avatarPlaceholder}>
-                                <User size={32} color="#666" />
+                            <View style={[styles.avatarPlaceholder, { borderColor: '#E5E7EB' }]}>
+                                <User size={32} color="#94A3B8" />
                             </View>
                         )}
                         <View style={styles.cameraIconBadge}>
-                            <Camera size={16} color="#666" />
+                            <Camera size={16} color="#001C3D" />
                         </View>
                     </TouchableOpacity>
                     <Text style={styles.addPhotoText}>Add Profile Photo</Text>
                     <TouchableOpacity onPress={() => setShowTooltip(!showTooltip)} style={{ padding: 4 }}>
-                        <Info size={20} color="#007AFF" />
+                        <Info size={20} color="#001C3D" />
                     </TouchableOpacity>
 
                     {showTooltip && (
@@ -160,62 +167,42 @@ const VehicleInfoScreen = () => {
 
                 <View style={styles.form}>
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Brand (Auto Suggestion)</Text>
-                        <View style={styles.dropdownContainer}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Select Brand"
-                                value={make}
-                                onChangeText={(text) => { setMake(text); setShowMakeSuggestions(true); setModel(''); }}
-                                onFocus={() => setShowMakeSuggestions(true)}
-                            />
-                            <ChevronLeft size={20} color="#666" style={{ transform: [{ rotate: showMakeSuggestions ? '90deg' : '-90deg' }] }} />
-                        </View>
-                        {showMakeSuggestions && (
-                            <View style={styles.suggestionsContainer}>
-                                <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={{ maxHeight: 150 }}>
-                                    {filteredMakes.map(item => (
-                                        <TouchableOpacity
-                                            key={item}
-                                            style={styles.suggestionItem}
-                                            onPress={() => { setMake(item); setShowMakeSuggestions(false); setModel(''); }}
-                                        >
-                                            <Text style={styles.suggestionText}>{item}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
+                        <Text style={styles.label}>Vehicle Brand *</Text>
+                        <TouchableOpacity
+                            style={styles.dropdownContainer}
+                            onPress={() => {
+                                setMakeSearch('');
+                                setShowMakeModal(true);
+                            }}
+                        >
+                            <View style={styles.inputReplacement}>
+                                <Car size={20} color="#94A3B8" style={{ marginRight: 12 }} />
+                                <Text style={[styles.inputText, !make && { color: '#94A3B8' }]}>
+                                    {make || 'Select Vehicle Brand'}
+                                </Text>
                             </View>
-                        )}
+                            <ChevronLeft size={20} color="#94A3B8" style={{ transform: [{ rotate: '-90deg' }] }} />
+                        </TouchableOpacity>
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Model (Auto suggestion) *</Text>
-                        <View style={styles.dropdownContainer}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Select Model"
-                                value={model}
-                                onChangeText={(text) => { setModel(text); setShowModelSuggestions(true); }}
-                                onFocus={() => setShowModelSuggestions(true)}
-                                editable={!!make}
-                            />
-                            <ChevronLeft size={20} color="#666" style={{ transform: [{ rotate: showModelSuggestions ? '90deg' : '-90deg' }] }} />
-                        </View>
-                        {showModelSuggestions && make && availableModels.length > 0 && (
-                            <View style={styles.suggestionsContainer}>
-                                <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={{ maxHeight: 150 }}>
-                                    {filteredModels.map(item => (
-                                        <TouchableOpacity
-                                            key={item}
-                                            style={styles.suggestionItem}
-                                            onPress={() => { setModel(item); setShowModelSuggestions(false); }}
-                                        >
-                                            <Text style={styles.suggestionText}>{item}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
+                        <Text style={styles.label}>Vehicle Model *</Text>
+                        <TouchableOpacity
+                            style={styles.dropdownContainer}
+                            onPress={() => {
+                                setModelSearch('');
+                                setShowModelModal(true);
+                            }}
+                            disabled={!make}
+                        >
+                            <View style={styles.inputReplacement}>
+                                <Car size={20} color="#94A3B8" style={{ marginRight: 12 }} />
+                                <Text style={[styles.inputText, !model && { color: '#94A3B8' }]}>
+                                    {model || 'Select Vehicle Model'}
+                                </Text>
                             </View>
-                        )}
+                            <ChevronLeft size={20} color="#94A3B8" style={{ transform: [{ rotate: '-90deg' }] }} />
+                        </TouchableOpacity>
                     </View>
 
                     <View style={styles.inputGroup}>
@@ -253,11 +240,127 @@ const VehicleInfoScreen = () => {
                     </View>
                     <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={loading}>
                         {loading ? <ActivityIndicator color="#fff" /> : (
-                            <Text style={styles.submitText}>CONTINUE</Text>
+                            <>
+                                <Text style={styles.submitText}>CONTINUE</Text>
+                                <ArrowRight size={20} color="#fff" style={{ marginLeft: 8 }} />
+                            </>
                         )}
                     </TouchableOpacity>
                 </View>
             </ScrollView>
+
+            {/* Brand Selection Modal */}
+            <Modal
+                visible={showMakeModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowMakeModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <View style={styles.modalHeaderBar} />
+                            <View style={styles.modalTitleRow}>
+                                <Text style={styles.modalTitle}>Select Vehicle Brand</Text>
+                                <TouchableOpacity onPress={() => setShowMakeModal(false)}>
+                                    <View style={styles.closeModalButton}>
+                                        <X size={20} color="#666" />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                            <View style={styles.searchContainer}>
+                                <Search size={20} color="#94A3B8" />
+                                <TextInput
+                                    style={styles.searchInput}
+                                    placeholder="Search brands..."
+                                    value={makeSearch}
+                                    onChangeText={setMakeSearch}
+                                    placeholderTextColor="#94A3B8"
+                                    autoFocus
+                                />
+                            </View>
+                        </View>
+
+                        <FlatList
+                            data={filteredMakes}
+                            keyExtractor={(item) => item}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.modalItem}
+                                    onPress={() => {
+                                        setMake(item);
+                                        setShowMakeModal(false);
+                                        setModel('');
+                                    }}
+                                >
+                                    <Text style={[styles.modalItemText, make === item && styles.modalItemSelectedText]}>
+                                        {item}
+                                    </Text>
+                                    {make === item && <Check size={20} color="#001C3D" />}
+                                </TouchableOpacity>
+                            )}
+                            contentContainerStyle={{ paddingBottom: 40 }}
+                            showsVerticalScrollIndicator={false}
+                        />
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Model Selection Modal */}
+            <Modal
+                visible={showModelModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowModelModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <View style={styles.modalHeaderBar} />
+                            <View style={styles.modalTitleRow}>
+                                <Text style={styles.modalTitle}>Select Vehicle Model</Text>
+                                <TouchableOpacity onPress={() => setShowModelModal(false)}>
+                                    <View style={styles.closeModalButton}>
+                                        <X size={20} color="#666" />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                            <View style={styles.searchContainer}>
+                                <Search size={20} color="#94A3B8" />
+                                <TextInput
+                                    style={styles.searchInput}
+                                    placeholder="Search models..."
+                                    value={modelSearch}
+                                    onChangeText={setModelSearch}
+                                    placeholderTextColor="#94A3B8"
+                                    autoFocus
+                                />
+                            </View>
+                        </View>
+
+                        <FlatList
+                            data={modelSearch ? availableModels.filter(m => m.toLowerCase().includes(modelSearch.toLowerCase())) : availableModels}
+                            keyExtractor={(item) => item}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.modalItem}
+                                    onPress={() => {
+                                        setModel(item);
+                                        setShowModelModal(false);
+                                    }}
+                                >
+                                    <Text style={[styles.modalItemText, model === item && styles.modalItemSelectedText]}>
+                                        {item}
+                                    </Text>
+                                    {model === item && <Check size={20} color="#001C3D" />}
+                                </TouchableOpacity>
+                            )}
+                            contentContainerStyle={{ paddingBottom: 40 }}
+                            showsVerticalScrollIndicator={false}
+                        />
+                    </View>
+                </View>
+            </Modal>
         </KeyboardAvoidingView>
     );
 };
@@ -266,12 +369,32 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
     scrollContainer: { padding: 24, paddingBottom: 40 },
     topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Platform.OS === 'ios' ? 0 : 20 },
-    backButton: { padding: 4, marginLeft: -4 },
-    skipText: { fontSize: 16, fontWeight: '800', color: '#007AFF' },
-    header: { marginTop: 24, marginBottom: 24 },
-    titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    title: { fontSize: 32, fontWeight: '800', color: '#334155', letterSpacing: -0.5 },
-    stepIndicator: { fontSize: 32, fontWeight: '400', color: '#64748B' },
+    header: {
+        marginTop: 24,
+        marginBottom: 24,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    backButton: {
+        marginLeft: -12,
+        marginRight: 4,
+        padding: 4,
+    },
+    title: {
+        flex: 1,
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#1E293B',
+        letterSpacing: -0.5,
+    },
+    stepIndicator: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#64748B',
+    },
     subtitle: { fontSize: 16, color: '#64748B', marginTop: 8, fontWeight: '500' },
     photoContainer: { alignItems: 'center', marginBottom: 32, zIndex: 10 },
     avatarContainer: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', position: 'relative' },
@@ -292,9 +415,25 @@ const styles = StyleSheet.create({
     suggestionText: { fontSize: 16, color: '#334155' },
     taxiRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     checkbox: { width: 28, height: 28, borderRadius: 4, borderWidth: 2, borderColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center' },
-    checkboxActive: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
-    submitBtn: { height: 64, backgroundColor: '#4A1D24', borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginTop: 12 },
-    submitText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 1 },
+    checkboxActive: { backgroundColor: '#001C3D', borderColor: '#001C3D' },
+    submitBtn: { height: 56, backgroundColor: '#001C3D', borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 12 },
+    submitText: { color: '#fff', fontSize: 18, fontWeight: '600' },
+
+    // Modal Styles
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%', paddingHorizontal: 24 },
+    modalHeader: { paddingVertical: 16 },
+    modalHeaderBar: { width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+    modalTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    modalTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B' },
+    closeModalButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
+    searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', borderRadius: 12, paddingHorizontal: 16, height: 50 },
+    searchInput: { flex: 1, marginLeft: 12, fontSize: 16, color: '#1E293B' },
+    modalItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    modalItemText: { fontSize: 16, color: '#475569', fontWeight: '500' },
+    modalItemSelectedText: { color: '#001C3D', fontWeight: '800' },
+    inputReplacement: { flex: 1, flexDirection: 'row', alignItems: 'center', height: 56, paddingHorizontal: 16 },
+    inputText: { fontSize: 16, color: '#1E293B' },
 });
 
 export default VehicleInfoScreen;

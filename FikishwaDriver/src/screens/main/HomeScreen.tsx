@@ -254,7 +254,6 @@ const HomeScreen = () => {
             if (response.data.success) {
                 const rideData = response.data.ride || response.data.data;
                 if (rideData) {
-                    Alert.alert('Debug: Accepted', `Ride ${rideId.substring(0, 5)} is now active!`);
                     setActiveRide(rideData);
                     setCurrentRequest(null);
                 }
@@ -283,7 +282,6 @@ const HomeScreen = () => {
                 status: 'arrived'
             });
             if (response.data.success) {
-                Alert.alert('Debug: Arrived', 'Wait for Customer button should now show.');
                 setActiveRide({ ...activeRide, status: 'arrived' });
                 setShowArrivalConfirmModal(false);
             }
@@ -306,7 +304,6 @@ const HomeScreen = () => {
         try {
             const response = await driverApiService.startRide(id);
             if (response.data.success) {
-                Alert.alert('Debug: Started', 'Trip In Progress UI should now show.');
                 setActiveRide({ ...activeRide, status: 'in_progress' });
             }
         } catch (error: any) {

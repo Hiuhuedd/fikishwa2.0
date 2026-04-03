@@ -96,16 +96,19 @@ exports.requestRide = async (req, res) => {
     }
 
     try {
+        const sanitizedRideType = (rideType || 'fikaa').toString().trim();
+        const sanitizedCategory = (vehicleCategory || sanitizedRideType).toString().trim();
+
         const ride = await rideService.requestRide({
             customerId,
             customerName,
             pickup,
             stops: stops || [],
             dropoff,
-            rideType: rideType || 'standard',
+            rideType: sanitizedRideType,
             paymentMethod,
             promoCode,        // Pass promo code
-            vehicleCategory: vehicleCategory || rideType || 'standard'   // Pass vehicle category
+            vehicleCategory: sanitizedCategory   // Pass vehicle category
         });
 
         res.json({ success: true, ride });
@@ -125,7 +128,7 @@ exports.getActiveRide = async (req, res) => {
         const { getFirestoreApp } = require('../firebase');
         const db = getFirestoreApp();
         const ridesRef = collection(db, 'rides');
-        
+
         // Find latest ride that isn't completed or cancelled
         const q = query(
             ridesRef,
@@ -135,18 +138,18 @@ exports.getActiveRide = async (req, res) => {
         );
 
         const snapshot = await getDocs(q);
-        
+
         if (snapshot.empty) {
             return res.json({ success: true, ride: null });
         }
 
         const doc = snapshot.docs[0];
-        res.json({ 
-            success: true, 
-            ride: { 
-                rideId: doc.id, 
-                ...doc.data() 
-            } 
+        res.json({
+            success: true,
+            ride: {
+                rideId: doc.id,
+                ...doc.data()
+            }
         });
     } catch (error) {
         console.error('[RideController] getActiveRide error:', error);

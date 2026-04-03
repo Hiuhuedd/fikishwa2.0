@@ -45,7 +45,7 @@ const HistoryScreen = () => {
                     <View style={styles.dotsContainer}>
                         <View style={styles.dot} />
                         <View style={styles.line} />
-                        <View style={[styles.dot, { backgroundColor: '#4A1D24' }]} />
+                        <View style={[styles.dot, { backgroundColor: '#001C3D' }]} />
                     </View>
                     <View style={styles.addressList}>
                         <Text style={styles.addressText} numberOfLines={1}>
@@ -80,7 +80,7 @@ const HistoryScreen = () => {
 
             {loading ? (
                 <View style={styles.center}>
-                    <ActivityIndicator size="large" color="#4A1D24" />
+                    <ActivityIndicator size="large" color="#001C3D" />
                 </View>
             ) : (
                 <FlatList

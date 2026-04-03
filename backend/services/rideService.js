@@ -17,9 +17,14 @@ const db = getFirestoreApp();
  * Request a ride
  */
 const requestRide = async (customerData) => {
-    const {
-        customerId, pickup, stops, dropoff, rideType, paymentMethod, promoCode, vehicleCategory
-    } = customerData;
+    const customerId = customerData.customerId;
+    const pickup = customerData.pickup;
+    const stops = customerData.stops || [];
+    const dropoff = customerData.dropoff;
+    const rideType = (customerData.rideType || 'fikaa').toString().trim();
+    const paymentMethod = customerData.paymentMethod;
+    const promoCode = customerData.promoCode;
+    const vehicleCategory = (customerData.vehicleCategory || rideType).toString().trim();
 
     try {
         // 1. Get accurate route and distance
@@ -43,8 +48,8 @@ const requestRide = async (customerData) => {
             pickup,
             stops: stops || [],
             dropoff,
-            rideType: rideType || 'standard',
-            vehicleCategory: vehicleCategory || rideType || 'standard', // Store category
+            rideType: rideType,
+            vehicleCategory: vehicleCategory, // Store category
             paymentMethod,
             status: 'searching',
             estimatedFare: estimate.estimatedFare,
@@ -77,8 +82,8 @@ const requestRide = async (customerData) => {
             rideId,
             pickup,
             geohash: pickupGeohash,
-            rideType: rideType || 'standard',
-            vehicleCategory: vehicleCategory || rideType || 'standard',
+            rideType: rideType,
+            vehicleCategory: vehicleCategory,
             estimatedFare: estimate.estimatedFare,
             customerName: customerData.customerName || 'Customer',
             stops: stops || [],

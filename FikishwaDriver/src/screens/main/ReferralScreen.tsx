@@ -114,15 +114,15 @@ const ReferralScreen = () => {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>How it works</Text>
                     <View style={styles.stepItem}>
-                        <View style={[styles.stepDot, { backgroundColor: '#007AFF' }]}><Text style={styles.stepNumber}>1</Text></View>
+                        <View style={[styles.stepDot, { backgroundColor: '#001C3D' }]}><Text style={styles.stepNumber}>1</Text></View>
                         <Text style={styles.stepText}>Share your code with other drivers</Text>
                     </View>
                     <View style={styles.stepItem}>
-                        <View style={[styles.stepDot, { backgroundColor: '#007AFF' }]}><Text style={styles.stepNumber}>2</Text></View>
+                        <View style={[styles.stepDot, { backgroundColor: '#001C3D' }]}><Text style={styles.stepNumber}>2</Text></View>
                         <Text style={styles.stepText}>They register and get verified</Text>
                     </View>
                     <View style={styles.stepItem}>
-                        <View style={[styles.stepDot, { backgroundColor: '#007AFF' }]}><Text style={styles.stepNumber}>3</Text></View>
+                        <View style={[styles.stepDot, { backgroundColor: '#001C3D' }]}><Text style={styles.stepNumber}>3</Text></View>
                         <Text style={styles.stepText}>You get KES 500 after their 10th ride</Text>
                     </View>
                 </View>
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
         width: 100,
         height: 100,
         borderRadius: 50,
-        backgroundColor: '#E5F1FF',
+        backgroundColor: '#E6F0FF',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,

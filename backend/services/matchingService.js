@@ -35,19 +35,26 @@ const findNearbyDrivers = async (pickup, radiusKm = 10, requestedCategory = null
         const querySnapshot = await getDocs(q);
         const drivers = [];
 
+        console.log(`🔍 [Matching] findNearbyDrivers: Found ${querySnapshot.size} total active drivers in geohash ${pickupGeohash}`);
+
         querySnapshot.forEach((doc) => {
             const data = doc.data();
 
             // In-memory filtering
             const isOnline = data.online === true;
             const isNotBusy = data.busy === false;
-            const matchesCategory = !requestedCategory || data.currentCategory === requestedCategory;
+            const driverCategory = (data.currentCategory || 'fikaa').toString().trim();
+            const requestedCatTrimmed = (requestedCategory || '').toString().trim();
+            const matchesCategory = !requestedCategory || driverCategory === requestedCatTrimmed;
+
+            console.log(`   - Driver ${doc.id}: online=${isOnline}, busy=${isNotBusy}, cat=${driverCategory} (requested=${requestedCatTrimmed})`);
 
             if (isOnline && isNotBusy && matchesCategory) {
                 drivers.push({ id: doc.id, ...data });
             }
         });
 
+        console.log(`✅ [Matching] findNearbyDrivers: Returning ${drivers.length} matched drivers`);
         // Optional: Manual distance filtering if higher precision is needed
         return drivers;
     } catch (error) {
@@ -65,7 +72,7 @@ const findNearbyRequests = async (location, category = 'standard') => {
     try {
         const geohash = ngeohash.encode(location.lat, location.lng, 5);
         console.log(`🔍 [Matching] DISCOVERY: Searching near ${geohash} for category: ${category}`);
-        
+
         const requestRef = collection(db, 'rideRequests');
         const q = query(
             requestRef,
@@ -83,9 +90,9 @@ const findNearbyRequests = async (location, category = 'standard') => {
             const reqCategory = data.vehicleCategory || data.rideType || 'standard';
             const isActive = data.status === 'pending';
             const isMatch = reqCategory === category && isActive;
-            
+
             console.log(`   - [${isMatch ? 'MATCH' : 'SKIP'}] Request ${doc.id}: Status=${data.status}, RequestCat=${reqCategory}, DriverCat=${category}, Geohash=${data.geohash}`);
-            
+
             if (isMatch) {
                 requests.push({ id: doc.id, ...data });
             }

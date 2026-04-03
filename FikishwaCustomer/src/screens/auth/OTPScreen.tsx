@@ -21,6 +21,7 @@ const OTPScreen = () => {
     const { login } = useAuthStore();
 
     const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
+    const [focusedIndex, setFocusedIndex] = useState(0);
     const [loading, setLoading] = useState(false);
     const [countdown, setCountdown] = useState(60);
     const inputRefs = useRef<TextInput[]>([]);
@@ -32,23 +33,30 @@ const OTPScreen = () => {
         }
     }, [countdown]);
 
-    const maskPhone = (p: string) => {
-        if (!p) return '';
-        const parts = p.split(' ');
-        let main = parts.length > 1 ? parts[1] : p.replace('+254', '');
+    const maskIdentifier = (id: string) => {
+        if (!id) return '';
+        if (id.includes('@')) {
+            const [local, domain] = id.split('@');
+            return `${local.slice(0, 2)}***@${domain}`;
+        }
+        const parts = id.split(' ');
+        let main = parts.length > 1 ? parts[1] : id.replace('+254', '');
         if (main.startsWith('254')) main = main.slice(3);
         return `+254 *****${main.slice(-4)}`;
     };
 
     const handleChange = (text: string, index: number) => {
         if (text.length > 1) {
-            // Handle paste if needed, but for now just take the first char
             text = text.charAt(text.length - 1);
         }
+
+        // Only allow numbers
+        if (text && !/^\d+$/.test(text)) return;
+
         const newOtp = [...otp];
         newOtp[index] = text;
         setOtp(newOtp);
-        
+
         if (text && index < OTP_LENGTH - 1) {
             inputRefs.current[index + 1]?.focus();
         }
@@ -69,34 +77,42 @@ const OTPScreen = () => {
             const response = await customerApiService.verifyOtp({ sessionId, otp: code });
             if (response.data.success) {
                 const { token, userProfile } = response.data.data;
-                
+
                 if (registrationData) {
-                    // Temporarily store in AsyncStorage so the api interceptor can use it
                     await AsyncStorage.setItem('customerToken', token);
-                    
                     try {
                         const name = `${registrationData.firstName} ${registrationData.lastName}`.trim();
-                        await customerApiService.updateProfile({ 
-                            name, 
-                            email: registrationData.email 
+                        await customerApiService.updateProfile({
+                            name,
+                            email: registrationData.email
                         });
                     } catch (e) {
                         console.log('[OTP] Failed to update profile after registration:', e);
                     }
                     navigation.replace('Success', { token, userProfile });
                 } else {
-                    // Log the user in normally, triggering AppNavigator swap
-                    await login(token, userProfile);
-                    navigation.replace('Home');
+                    const isProfileComplete = !!(userProfile.name && userProfile.email);
+                    if (isProfileComplete) {
+                        await login(token, userProfile);
+                        navigation.replace('Home');
+                    } else {
+                        navigation.replace('Register', {
+                            mode: 'complete',
+                            token,
+                            userProfile
+                        });
+                    }
                 }
             } else {
                 Alert.alert('Invalid Code', 'The code you entered is incorrect.');
                 setOtp(Array(OTP_LENGTH).fill(''));
+                setFocusedIndex(0);
                 inputRefs.current[0]?.focus();
             }
         } catch (err: any) {
             Alert.alert('Error', err.response?.data?.message || 'Verification failed.');
             setOtp(Array(OTP_LENGTH).fill(''));
+            setFocusedIndex(0);
             inputRefs.current[0]?.focus();
         } finally {
             setLoading(false);
@@ -118,8 +134,8 @@ const OTPScreen = () => {
     return (
         <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
             <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-            <KeyboardAvoidingView 
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
             >
                 <View style={styles.header}>
@@ -130,19 +146,19 @@ const OTPScreen = () => {
 
                 <View style={styles.content}>
                     <Text style={[styles.title, { color: colors.textPrimary }]}>OTP Verification</Text>
-                    
+
                     <View style={styles.phoneRow}>
                         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                             Enter the OTP code that we sent to you on
                         </Text>
                         <View style={styles.maskContainer}>
                             <Text style={[styles.maskedPhone, { color: colors.textPrimary }]}>
-                                {maskPhone(phone)}
+                                {maskIdentifier(phone)}
                             </Text>
                             <TouchableOpacity onPress={() => navigation.goBack()}>
                                 <Pencil size={18} color={colors.info} />
                             </TouchableOpacity>
-                            
+
                             <View style={styles.timerWrap}>
                                 <Clock size={16} color={colors.info} />
                                 <Text style={[styles.timerText, { color: colors.info }]}>
@@ -154,31 +170,42 @@ const OTPScreen = () => {
 
                     {/* OTP Boxes */}
                     <View style={styles.otpRow}>
-                        {otp.map((digit, i) => (
-                            <TextInput
-                                key={i}
-                                ref={(ref) => { if (ref) inputRefs.current[i] = ref; }}
-                                style={[
-                                    styles.otpBox,
-                                    {
-                                        borderColor: digit ? colors.primary : colors.border,
-                                        backgroundColor: colors.backgroundCard,
-                                        color: colors.textPrimary,
-                                    }
-                                ]}
-                                maxLength={2} // for handling some weird keyboard issues
-                                keyboardType="number-pad"
-                                autoFocus={i === 0}
-                                value={digit}
-                                onChangeText={(t) => handleChange(t, i)}
-                                onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
-                                textAlign="center"
-                            />
-                        ))}
+                        {otp.map((digit, i) => {
+                            const isFocused = focusedIndex === i;
+                            return (
+                                <View
+                                    key={i}
+                                    style={[
+                                        styles.otpInputWrapper,
+                                        {
+                                            borderColor: isFocused ? colors.primary : colors.border,
+                                            backgroundColor: isFocused ? colors.background : colors.backgroundCard,
+                                            shadowOpacity: isFocused ? 0.15 : 0.05,
+                                            elevation: isFocused ? 4 : 2,
+                                        },
+                                        digit !== '' && !isFocused && { backgroundColor: colors.primary + '08' }
+                                    ]}
+                                >
+                                    <TextInput
+                                        ref={(ref) => { if (ref) inputRefs.current[i] = ref; }}
+                                        style={[styles.otpBox, { color: colors.textPrimary }]}
+                                        maxLength={1}
+                                        keyboardType="number-pad"
+                                        autoFocus={i === 0}
+                                        value={digit}
+                                        onChangeText={(t) => handleChange(t, i)}
+                                        onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
+                                        onFocus={() => setFocusedIndex(i)}
+                                        textAlign="center"
+                                        selectTextOnFocus
+                                    />
+                                </View>
+                            );
+                        })}
                     </View>
 
-                    <TouchableOpacity 
-                        onPress={handleResend} 
+                    <TouchableOpacity
+                        onPress={handleResend}
                         disabled={countdown > 0}
                         style={styles.resendBtn}
                     >
@@ -256,14 +283,24 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 16,
         justifyContent: 'center',
+        marginVertical: 20,
     },
-    otpBox: {
+    otpInputWrapper: {
         width: 65,
         height: 75,
-        borderRadius: 16,
-        borderWidth: 1.5,
-        fontSize: 28,
-        fontWeight: '700',
+        borderRadius: 18,
+        borderWidth: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 10,
+    },
+    otpBox: {
+        width: '100%',
+        height: '100%',
+        fontSize: 32,
+        fontWeight: '800',
     },
     resendBtn: {
         marginTop: 32,

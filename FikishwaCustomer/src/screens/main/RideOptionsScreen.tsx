@@ -33,7 +33,7 @@ interface VehicleCategory {
 }
 
 const DEFAULT_CATEGORIES: VehicleCategory[] = [
-    { id: 'standard', name: 'Standard', description: 'Everyday rides', baseFare: 150, perKmRate: 40, perMinRate: 5, perStopFee: 100, iconEmoji: '🚗', capacity: 4, eta: 3 },
+    { id: 'fikaa', name: 'Fikaa', description: 'Everyday affordable rides', baseFare: 100, perKmRate: 30, perMinRate: 3, perStopFee: 50, iconEmoji: '🛵', capacity: 1, eta: 3 },
     { id: 'premium', name: 'Premium', description: 'Luxury comfort', baseFare: 300, perKmRate: 55, perMinRate: 8, perStopFee: 150, iconEmoji: '🚙', capacity: 4, eta: 6 },
 ];
 

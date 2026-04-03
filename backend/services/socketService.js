@@ -37,7 +37,7 @@ const initSocket = (server) => {
                 userSockets.set(userId, socket.id);
                 socket.join(role); // join role-based rooms
                 socket.join(userId); // join user-specific room
-                console.log(`User ${userId} (${role}) joined room`);
+                console.log(`📡 [Socket] User Joined: ${userId} | Role: ${role} | SocketID: ${socket.id}`);
 
                 if (role === 'driver' && location) {
                     driverLocations.set(userId, {
@@ -156,9 +156,18 @@ const emitToDrivers = (event, data) => {
  */
 const emitToNearbyDrivers = (driverIds, event, data) => {
     if (io) {
+        console.log(`📡 [Socket] emitToNearbyDrivers: Attempting to notify ${driverIds.length} drivers: ${driverIds.join(', ')}`);
         driverIds.forEach(driverId => {
-            io.to(driverId).emit(event, data);
+            const socketId = userSockets.get(driverId);
+            if (socketId) {
+                console.log(`   - Emitting '${event}' to driver ${driverId} (socket: ${socketId})`);
+                io.to(driverId).emit(event, data);
+            } else {
+                console.warn(`   - ⚠️ Driver ${driverId} is NOT in userSockets map. Skipping emission.`);
+            }
         });
+    } else {
+        console.error('🔴 [Socket] emitToNearbyDrivers: Socket.io not initialized!');
     }
 };
 

@@ -24,6 +24,7 @@ const IdentityDocumentScreen = () => {
         goodConductUrl: (user as any)?.goodConductUrl || null,
     });
     const [uploading, setUploading] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
 
     const pickDocument = async (field: keyof typeof docs) => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -74,19 +75,23 @@ const IdentityDocumentScreen = () => {
         }
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (!docs.idFrontUrl || !docs.idBackUrl || !docs.licenseUrl) {
             Alert.alert('Missing Documents', 'ID and Driving License are required to proceed');
             return;
         }
-        navigation.navigate('DocumentUpload'); // Next is vehicle docs
+        setLoading(true);
+        setTimeout(() => {
+            setLoading(false);
+            navigation.navigate('DocumentUpload');
+        }, 800);
     };
 
     const DocumentItem = ({ index, title, description, field, value }: { index: number, title: string, description: string, field: keyof typeof docs, value: string | null }) => (
         <View style={styles.docItem}>
             <View style={styles.docMain}>
                 <View style={[styles.numberCircle, value && styles.numberCircleCompleted]}>
-                    {value ? <CheckCircle size={20} color="#3182CE" /> : <Text style={styles.numberText}>{index}</Text>}
+                    {value ? <CheckCircle size={20} color="#001C3D" /> : <Text style={styles.numberText}>{index}</Text>}
                 </View>
                 <View style={styles.docInfo}>
                     <Text style={styles.docTitle}>{title}</Text>
@@ -99,11 +104,11 @@ const IdentityDocumentScreen = () => {
                 disabled={uploading === field}
             >
                 {uploading === field ? (
-                    <ActivityIndicator size="small" color="#007AFF" />
+                    <ActivityIndicator size="small" color="#001C3D" />
                 ) : value ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#EBF5FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 }}>
-                        <CheckCircle size={14} color="#3182CE" style={{ marginRight: 4 }} />
-                        <Text style={{ color: '#3182CE', fontSize: 13, fontWeight: '600' }}>Uploaded</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E6F0FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 }}>
+                        <CheckCircle size={14} color="#001C3D" style={{ marginRight: 4 }} />
+                        <Text style={{ color: '#001C3D', fontSize: 13, fontWeight: '600' }}>Uploaded</Text>
                     </View>
                 ) : (
                     <Upload size={24} color="#1A1A1A" />
@@ -116,10 +121,13 @@ const IdentityDocumentScreen = () => {
         <View style={[styles.container, { backgroundColor: '#fff' }]}>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('PersonalDetails')} style={styles.backButton}>
-                        <ChevronLeft size={28} color="#1A1A1A" />
-                    </TouchableOpacity>
-                    <Text style={styles.title}>Identity Docs</Text>
+                    <View style={styles.titleRow}>
+                        <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('PersonalDetails')} style={styles.backButton}>
+                            <ChevronLeft size={28} color="#1A1A1A" />
+                        </TouchableOpacity>
+                        <Text style={styles.title}>Identity Docs</Text>
+                        <Text style={styles.stepIndicator}>2/4</Text>
+                    </View>
                     <Text style={styles.subtitle}>Verify your identity and permit</Text>
                 </View>
 
@@ -147,16 +155,22 @@ const IdentityDocumentScreen = () => {
                     />
                     <DocumentItem
                         index={4}
-                        title="Good Conduct (Optional)"
+                        title="Good Conduct"
                         description="Police clearance certificate"
                         field="goodConductUrl"
                         value={docs.goodConductUrl}
                     />
                 </View>
 
-                <TouchableOpacity style={styles.submitBtn} onPress={handleNext}>
-                    <Text style={styles.submitBtnText}>CONTINUE</Text>
-                    <ArrowRight size={20} color="#fff" style={{ marginLeft: 8 }} />
+                <TouchableOpacity style={styles.submitBtn} onPress={handleNext} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <>
+                            <Text style={styles.submitBtnText}>CONTINUE</Text>
+                            <ArrowRight size={20} color="#fff" style={{ marginLeft: 8 }} />
+                        </>
+                    )}
                 </TouchableOpacity>
             </ScrollView>
         </View>
@@ -166,22 +180,49 @@ const IdentityDocumentScreen = () => {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     scrollContainer: { padding: 24, paddingBottom: 40 },
-    header: { marginTop: 20, marginBottom: 32 },
-    backButton: { marginBottom: 20, marginLeft: -4 },
-    title: { fontSize: 32, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.5 },
-    subtitle: { fontSize: 16, color: '#666', marginTop: 8 },
+    header: {
+        marginTop: 24,
+        marginBottom: 24,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    backButton: {
+        marginLeft: -12,
+        marginRight: 4,
+        padding: 4,
+    },
+    title: {
+        flex: 1,
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#1E293B',
+        letterSpacing: -0.5,
+    },
+    stepIndicator: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#64748B',
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#64748B',
+        fontWeight: '500',
+    },
     docList: { gap: 24, marginBottom: 40 },
     docItem: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0' },
     docMain: { flexDirection: 'row', flex: 1, gap: 16 },
     numberCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
-    numberCircleCompleted: { backgroundColor: '#EBF5FF', borderColor: '#3182CE' },
+    numberCircleCompleted: { backgroundColor: '#E6F0FF', borderColor: '#001C3D' },
     numberText: { fontSize: 16, fontWeight: '600', color: '#64748B' },
     docInfo: { flex: 1 },
     docTitle: { fontSize: 18, color: '#1E293B', fontWeight: '700' },
     docDescription: { fontSize: 13, color: '#64748B', marginTop: 2 },
     uploadBtnAction: { padding: 8, justifyContent: 'center' },
-    submitBtn: { height: 64, backgroundColor: '#007AFF', borderRadius: 32, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 'auto' },
-    submitBtnText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 1 },
+    submitBtn: { height: 56, backgroundColor: '#001C3D', borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 'auto' },
+    submitBtnText: { color: '#fff', fontSize: 18, fontWeight: '600' },
 });
 
 export default IdentityDocumentScreen;

@@ -4,26 +4,38 @@ import {
     StatusBar, TextInput, ScrollView, KeyboardAvoidingView, Platform,
     Alert, ActivityIndicator
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
+import { useAuthStore } from '../../store/authStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChevronLeft, Check } from 'lucide-react-native';
 import customerApiService from '../../services/customerApiService';
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const RegisterScreen = () => {
     const navigation = useNavigation<any>();
+    const route = useRoute<any>();
+    const { mode = 'register', token: propToken, userProfile: propProfile } = route.params || {};
     const { colors, spacing, fontSizes } = useTheme();
+    const { login } = useAuthStore();
 
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [email, setEmail] = useState('');
-    const [phone, setPhone] = useState('');
+    const [firstName, setFirstName] = useState(propProfile?.name?.split(' ')[0] || '');
+    const [lastName, setLastName] = useState(propProfile?.name?.split(' ')[1] || '');
+    const [email, setEmail] = useState(propProfile?.email || '');
+    const [phone, setPhone] = useState(propProfile?.phone?.replace('254', '') || '');
     const [referralCode, setReferralCode] = useState('');
-    const [agreed, setAgreed] = useState(false);
+    const [agreed, setAgreed] = useState(mode === 'complete'); // Default true for complete profile
     const [loading, setLoading] = useState(false);
 
     const handleRegister = async () => {
+        const isCompleteMode = mode === 'complete';
         if (!firstName || !lastName || !email || !phone) {
             Alert.alert('Missing Info', 'Please fill in all required fields.');
+            return;
+        }
+        if (!emailRegex.test(email)) {
+            Alert.alert('Invalid Email', 'Please enter a valid email address.');
             return;
         }
         if (!agreed) {
@@ -31,15 +43,39 @@ const RegisterScreen = () => {
             return;
         }
 
+        // Format phone to +254...
+        const cleaned = phone.replace(/\s/g, '');
+        const formattedPhone = cleaned.startsWith('0')
+            ? '254' + cleaned.slice(1)
+            : cleaned.startsWith('254')
+                ? cleaned
+                : cleaned.startsWith('+254') ? cleaned.slice(1) : '254' + cleaned;
+
         setLoading(true);
         try {
-            // Format phone to +254...
-            const cleaned = phone.replace(/\s/g, '');
-            const formattedPhone = cleaned.startsWith('0')
-                ? '254' + cleaned.slice(1)
-                : cleaned.startsWith('254')
-                    ? cleaned
-                    : cleaned.startsWith('+254') ? cleaned.slice(1) : '254' + cleaned;
+            const fullName = `${firstName} ${lastName}`.trim();
+
+            if (isCompleteMode) {
+                // Ensure token is persisted for api interceptor
+                if (propToken) {
+                    await AsyncStorage.setItem('customerToken', propToken);
+                }
+
+                // For complete profile, just update and login
+                await customerApiService.updateProfile({
+                    name: fullName,
+                    email: email,
+                    phone: formattedPhone
+                });
+
+                if (propToken && propProfile) {
+                    await login(propToken, { ...propProfile, name: fullName, email: email });
+                    navigation.replace('Home');
+                } else {
+                    navigation.goBack();
+                }
+                return;
+            }
 
             const payload = {
                 firstName,
@@ -59,7 +95,7 @@ const RegisterScreen = () => {
                 registrationData: payload
             });
         } catch (err: any) {
-            Alert.alert('Error', err.response?.data?.message || 'Failed to start registration.');
+            Alert.alert('Error', err.response?.data?.message || 'Action failed.');
         } finally {
             setLoading(false);
         }
@@ -79,8 +115,12 @@ const RegisterScreen = () => {
                 </View>
 
                 <ScrollView contentContainerStyle={styles.scrollContent}>
-                    <Text style={[styles.title, { color: colors.textPrimary }]}>Create Account</Text>
-                    <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Enter your basic details</Text>
+                    <Text style={[styles.title, { color: colors.textPrimary }]}>
+                        {mode === 'complete' ? 'Complete Profile' : 'Create Account'}
+                    </Text>
+                    <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+                        {mode === 'complete' ? 'We just need a few more details' : 'Enter your basic details'}
+                    </Text>
 
                     <View style={styles.form}>
                         {/* Name Row */}
@@ -91,7 +131,7 @@ const RegisterScreen = () => {
                                     style={[styles.input, { backgroundColor: colors.backgroundCard, color: colors.textPrimary }]}
                                     value={firstName}
                                     onChangeText={setFirstName}
-                                    placeholder="Edward"
+                                    placeholder="Enter First Name"
                                     placeholderTextColor={colors.textTertiary}
                                 />
                             </View>
@@ -101,7 +141,7 @@ const RegisterScreen = () => {
                                     style={[styles.input, { backgroundColor: colors.backgroundCard, color: colors.textPrimary }]}
                                     value={lastName}
                                     onChangeText={setLastName}
-                                    placeholder="Hiuhu"
+                                    placeholder="Enter Last Name"
                                     placeholderTextColor={colors.textTertiary}
                                 />
                             </View>
@@ -114,57 +154,63 @@ const RegisterScreen = () => {
                                 style={[styles.input, { backgroundColor: colors.backgroundCard, color: colors.textPrimary }]}
                                 value={email}
                                 onChangeText={setEmail}
-                                placeholder="Edwardhiuhu0@gmail.com"
+                                placeholder="Enter Email Address"
                                 placeholderTextColor={colors.textTertiary}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                             />
                         </View>
 
-                        {/* Mobile */}
-                        <View style={styles.fullWidthInput}>
-                            <Text style={[styles.label, { color: colors.textSecondary }]}>Mobile Number *</Text>
-                            <View style={[styles.phoneInputContainer, { backgroundColor: colors.backgroundCard }]}>
-                                <View style={styles.countryPicker}>
-                                    <Text style={{ fontSize: 20 }}>🇰🇪</Text>
-                                    <Text style={[styles.countryCode, { color: colors.textPrimary }]}>+254</Text>
+                        {/* Mobile - Show if missing from profile or in normal register mode */}
+                        {(mode !== 'complete' || !propProfile?.phone) && (
+                            <View style={styles.fullWidthInput}>
+                                <Text style={[styles.label, { color: colors.textSecondary }]}>Mobile Number *</Text>
+                                <View style={[styles.phoneInputContainer, { backgroundColor: colors.backgroundCard }]}>
+                                    <View style={styles.countryPicker}>
+                                        <Text style={{ fontSize: 20 }}>🇰🇪</Text>
+                                        <Text style={[styles.countryCode, { color: colors.textPrimary }]}>+254</Text>
+                                    </View>
+                                    <TextInput
+                                        style={[styles.phoneInput, { color: colors.textPrimary }]}
+                                        value={phone}
+                                        onChangeText={setPhone}
+                                        placeholder="7XXXXXXXX"
+                                        placeholderTextColor={colors.textTertiary}
+                                        keyboardType="phone-pad"
+                                    />
                                 </View>
+                            </View>
+                        )}
+
+                        {/* Referral - Hide in complete mode */}
+                        {mode !== 'complete' && (
+                            <View style={[styles.fullWidthInput, { marginTop: 10 }]}>
                                 <TextInput
-                                    style={[styles.phoneInput, { color: colors.textPrimary }]}
-                                    value={phone}
-                                    onChangeText={setPhone}
-                                    placeholder="743466032"
+                                    style={[styles.input, { backgroundColor: colors.backgroundCard, color: colors.textPrimary }]}
+                                    value={referralCode}
+                                    onChangeText={setReferralCode}
+                                    placeholder="Referral Code (Optional)"
                                     placeholderTextColor={colors.textTertiary}
-                                    keyboardType="phone-pad"
                                 />
                             </View>
-                        </View>
+                        )}
 
-                        {/* Referral */}
-                        <View style={[styles.fullWidthInput, { marginTop: 10 }]}>
-                            <TextInput
-                                style={[styles.input, { backgroundColor: colors.backgroundCard, color: colors.textPrimary }]}
-                                value={referralCode}
-                                onChangeText={setReferralCode}
-                                placeholder="Referral Code (Optional)"
-                                placeholderTextColor={colors.textTertiary}
-                            />
-                        </View>
-
-                        {/* Terms */}
-                        <View style={styles.termsContainer}>
-                            <TouchableOpacity
-                                style={[styles.checkbox, { backgroundColor: agreed ? colors.success : 'transparent', borderColor: agreed ? colors.success : colors.border }]}
-                                onPress={() => setAgreed(!agreed)}
-                            >
-                                {agreed && <Check size={14} color="#fff" />}
-                            </TouchableOpacity>
-                            <Text style={[styles.termsText, { color: colors.textSecondary }]}>
-                                By continuing, I confirm that i have read & agree to the{' '}
-                                <Text style={{ color: colors.info }}>Terms & Conditions</Text> and{' '}
-                                <Text style={{ color: colors.info }}>Privacy Policies</Text>
-                            </Text>
-                        </View>
+                        {/* Terms - Hide in complete mode if already agreed */}
+                        {mode !== 'complete' && (
+                            <View style={styles.termsContainer}>
+                                <TouchableOpacity
+                                    style={[styles.checkbox, { backgroundColor: agreed ? colors.success : 'transparent', borderColor: agreed ? colors.success : colors.border }]}
+                                    onPress={() => setAgreed(!agreed)}
+                                >
+                                    {agreed && <Check size={14} color="#fff" />}
+                                </TouchableOpacity>
+                                <Text style={[styles.termsText, { color: colors.textSecondary }]}>
+                                    By continuing, I confirm that i have read & agree to the{' '}
+                                    <Text style={{ color: colors.info }}>Terms & Conditions</Text> and{' '}
+                                    <Text style={{ color: colors.info }}>Privacy Policies</Text>
+                                </Text>
+                            </View>
+                        )}
                     </View>
                 </ScrollView>
 
@@ -177,7 +223,9 @@ const RegisterScreen = () => {
                         {loading ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
-                            <Text style={[styles.primaryBtnText, { color: colors.textOnPrimary }]}>Register</Text>
+                            <Text style={[styles.primaryBtnText, { color: colors.textOnPrimary }]}>
+                                {mode === 'complete' ? 'Get Started' : 'Register'}
+                            </Text>
                         )}
                     </TouchableOpacity>
                 </View>

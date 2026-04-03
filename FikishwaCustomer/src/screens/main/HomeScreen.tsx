@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
-    StatusBar, Animated, Dimensions, ScrollView, ActivityIndicator, Alert
+    StatusBar, Animated, Dimensions, ScrollView, ActivityIndicator, Alert,
+    AppState, AppStateStatus
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import MapView, { Marker, PROVIDER_GOOGLE, AnimatedRegion } from 'react-native-maps';
@@ -57,6 +58,15 @@ const HomeScreen = () => {
     const driverAnimations = useRef<Map<string, AnimatedRegion>>(new Map());
     const searchingPulseScale = useRef(new Animated.Value(1)).current;
     const geocodeTimeout = useRef<NodeJS.Timeout | null>(null);
+    const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
+
+    // AppState Listener
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            setAppState(nextAppState);
+        });
+        return () => subscription.remove();
+    }, []);
 
     // Safety watchdog for map ready state
     useEffect(() => {
@@ -161,7 +171,10 @@ const HomeScreen = () => {
      * Polls every 5 seconds to always show current drivers on map
      */
     useEffect(() => {
-        if (!user) return;
+        if (!user || appState !== 'active') {
+            console.log('[HomeScreen] ⏸️ Polling paused (User null or App Inactive)');
+            return;
+        }
 
         const fetchDrivers = async () => {
             try {
@@ -171,20 +184,24 @@ const HomeScreen = () => {
                     console.log('[HomeScreen] 🌐 HTTP poll: received', drivers.length, 'drivers');
                     setAvailableDrivers(drivers);
                 }
-            } catch (err) {
-                // Fail silently on poll errors
-                console.log('[HomeScreen] HTTP poll error (non-fatal):', err);
+            } catch (err: any) {
+                // Fail silently on poll errors, but log 429 specifically for debug
+                if (err.response?.status === 429) {
+                    console.warn('[HomeScreen] ⚠️ Rate limit hit (429) during driver poll');
+                } else {
+                    console.log('[HomeScreen] HTTP poll error (non-fatal):', err);
+                }
             }
         };
 
-        // Fetch immediately on mount
+        // Fetch immediately when coming to foreground or on mount
         fetchDrivers();
 
-        // Then poll every 5 seconds
-        const interval = setInterval(fetchDrivers, 5000);
+        // Then poll every 20 seconds (increased from 5s to prevent 429)
+        const interval = setInterval(fetchDrivers, 20000);
 
         return () => clearInterval(interval);
-    }, [user]);
+    }, [user, appState]);
 
     /**
      * Animate camera to location
@@ -229,7 +246,7 @@ const HomeScreen = () => {
 
     const handleRegionChangeComplete = async (region: any) => {
         const { latitude, longitude } = region;
-        
+
         if (isSelectingSavedPlace) {
             setPreviewLocation({ lat: latitude, lng: longitude });
         }

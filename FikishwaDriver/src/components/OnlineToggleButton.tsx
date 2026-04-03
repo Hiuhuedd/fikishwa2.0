@@ -29,7 +29,7 @@ const OnlineToggleButton = ({ isOnline, onPress, loading }: OnlineToggleButtonPr
 
 const styles = StyleSheet.create({
     onlineButton: { height: 64, borderRadius: 32, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', elevation: 8, marginTop: 16 },
-    onlineButtonStyle: { backgroundColor: '#007AFF' },
+    onlineButtonStyle: { backgroundColor: '#001C3D' },
     offlineButtonStyle: { backgroundColor: '#FF3B30' },
     onlineButtonText: { color: '#fff', fontSize: 20, fontWeight: '700' },
 });

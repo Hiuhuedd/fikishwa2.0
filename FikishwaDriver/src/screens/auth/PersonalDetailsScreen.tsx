@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useAuthStore } from '../../store/useAuthStore';
 import api from '../../services/api';
 import driverApiService from '../../services/driverApiService';
-import { User, Mail, MapPin, ArrowRight, ChevronLeft } from 'lucide-react-native';
+import { User, Mail, MapPin, Phone, ArrowRight, ChevronLeft } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,12 +16,19 @@ const PersonalDetailsScreen = () => {
 
     const [name, setName] = useState(user?.name || '');
     const [email, setEmail] = useState(user?.email || '');
+    const [phone, setPhone] = useState(user?.phone || '');
     const [address, setAddress] = useState(user?.address || '');
     const [loading, setLoading] = useState(false);
 
     const handleNext = async () => {
-        if (!name || !email || !address) {
+        if (!name || !email || !phone || !address) {
             Alert.alert('Error', 'Please fill in all fields');
+            return;
+        }
+
+        // Basic phone validation
+        if (phone.length < 9) {
+            Alert.alert('Error', 'Please enter a valid phone number');
             return;
         }
 
@@ -30,6 +37,7 @@ const PersonalDetailsScreen = () => {
             const response = await driverApiService.updateProfile({
                 name,
                 email,
+                phone,
                 address
             });
             if (response.data.success) {
@@ -37,7 +45,7 @@ const PersonalDetailsScreen = () => {
                 // Note: assuming token remains same, we keep it
                 const currentToken = useAuthStore.getState().token;
                 await setAuth(response.data.data, currentToken!);
-                navigation.navigate('DocumentUpload');
+                navigation.navigate('IdentityDocuments');
             }
         } catch (error: any) {
             console.error('Update profile error:', error);
@@ -54,16 +62,19 @@ const PersonalDetailsScreen = () => {
         >
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.header}>
-                    <TouchableOpacity
-                        onPress={() => Alert.alert('Sign Out', 'Do you want to sign out and change your phone number?', [
-                            { text: 'Cancel', style: 'cancel' },
-                            { text: 'Sign Out', onPress: logout, style: 'destructive' }
-                        ])}
-                        style={styles.backButton}
-                    >
-                        <ChevronLeft size={28} color="#1A1A1A" />
-                    </TouchableOpacity>
-                    <Text style={styles.title}>Personal Profile</Text>
+                    <View style={styles.titleRow}>
+                        <TouchableOpacity
+                            onPress={() => Alert.alert('Sign Out', 'Do you want to sign out and change your phone number?', [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: 'Sign Out', onPress: logout, style: 'destructive' }
+                            ])}
+                            style={styles.backButton}
+                        >
+                            <ChevronLeft size={28} color="#1A1A1A" />
+                        </TouchableOpacity>
+                        <Text style={styles.title}>Personal Profile</Text>
+                        <Text style={styles.stepIndicator}>1/4</Text>
+                    </View>
                     <Text style={styles.subtitle}>Let's start with your basic information</Text>
                 </View>
 
@@ -97,6 +108,20 @@ const PersonalDetailsScreen = () => {
                     </View>
 
                     <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Phone Number</Text>
+                        <View style={styles.inputContainer}>
+                            <Phone size={20} color="#666" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g. 0712345678"
+                                value={phone}
+                                onChangeText={setPhone}
+                                keyboardType="phone-pad"
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
                         <Text style={styles.label}>City/Address</Text>
                         <View style={styles.inputContainer}>
                             <MapPin size={20} color="#666" style={styles.inputIcon} />
@@ -114,8 +139,14 @@ const PersonalDetailsScreen = () => {
                         onPress={handleNext}
                         disabled={loading}
                     >
-                        <Text style={styles.buttonText}>Next Step</Text>
-                        <ArrowRight size={20} color="#fff" style={{ marginLeft: 8 }} />
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <>
+                                <Text style={styles.buttonText}>Next Step</Text>
+                                <ArrowRight size={20} color="#fff" style={{ marginLeft: 8 }} />
+                            </>
+                        )}
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -133,22 +164,35 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     header: {
-        marginTop: 20,
-        marginBottom: 32,
+        marginTop: 24,
+        marginBottom: 24,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
     },
     backButton: {
-        marginBottom: 20,
-        marginLeft: -4,
+        marginLeft: -12,
+        marginRight: 4,
+        padding: 4,
     },
     title: {
+        flex: 1,
         fontSize: 28,
         fontWeight: '800',
-        color: '#1A1A1A',
+        color: '#1E293B',
+        letterSpacing: -0.5,
+    },
+    stepIndicator: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#64748B',
     },
     subtitle: {
         fontSize: 16,
-        color: '#666',
-        marginTop: 8,
+        color: '#64748B',
+        fontWeight: '500',
     },
     form: {
         gap: 20,
@@ -181,7 +225,7 @@ const styles = StyleSheet.create({
     },
     button: {
         height: 56,
-        backgroundColor: '#007AFF',
+        backgroundColor: '#001C3D',
         borderRadius: 12,
         flexDirection: 'row',
         justifyContent: 'center',

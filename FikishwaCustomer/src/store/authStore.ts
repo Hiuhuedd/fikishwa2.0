@@ -13,9 +13,11 @@ interface Customer {
 interface AuthState {
     token: string | null;
     user: Customer | null;
+    lastIdentifier: string | null;
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (token: string, user: Customer) => Promise<void>;
+    saveIdentifier: (id: string) => Promise<void>;
     logout: () => Promise<void>;
     updateUser: (updates: Partial<Customer>) => void;
     checkAuth: () => Promise<void>;
@@ -24,13 +26,21 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
     token: null,
     user: null,
+    lastIdentifier: null,
     isAuthenticated: false,
     isLoading: true,
 
     login: async (token, user) => {
         await AsyncStorage.setItem('customerToken', token);
         await AsyncStorage.setItem('customerUser', JSON.stringify(user));
-        set({ token, user, isAuthenticated: true });
+        const id = user.email || user.phone;
+        if (id) await AsyncStorage.setItem('last_identifier', id);
+        set({ token, user, lastIdentifier: id || null, isAuthenticated: true });
+    },
+
+    saveIdentifier: async (id) => {
+        await AsyncStorage.setItem('last_identifier', id);
+        set({ lastIdentifier: id });
     },
 
     logout: async () => {
@@ -51,6 +61,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         try {
             const token = await AsyncStorage.getItem('customerToken');
             const userStr = await AsyncStorage.getItem('customerUser');
+            const lastId = await AsyncStorage.getItem('last_identifier');
+
+            set({ lastIdentifier: lastId });
+
             if (token && userStr) {
                 const user = JSON.parse(userStr);
                 set({ token, user, isAuthenticated: true, isLoading: false });

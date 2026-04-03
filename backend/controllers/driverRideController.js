@@ -43,7 +43,7 @@ exports.goOnline = async (req, res) => {
         }
 
         // Use the driver's primary vehicleType or their first approved category
-        let category = data.vehicleType || (data.approvedCategories && data.approvedCategories.length > 0 ? data.approvedCategories[0] : 'standard');
+        let category = (data.vehicleType || (data.approvedCategories && data.approvedCategories.length > 0 ? data.approvedCategories[0] : 'fikaa')).toString().trim();
         console.log(`🔍 [GoOnline] Using category: ${category}`);
 
         const geohash = ngeohash.encode(location.lat, location.lng, 6);
@@ -114,7 +114,7 @@ exports.acceptRide = async (req, res) => {
 
         const driverDetails = {
             name: driverData.name || req.user.name || 'Driver',
-            phone: driverData.phone || req.user.phone,
+            phone: driverData.phone || req.user.phone || 'N/A',
             rating: driverData.rating || 4.8,
             vehicleMake: driverData.carMake || '',
             vehicleModel: driverData.carModel || '',
@@ -122,6 +122,14 @@ exports.acceptRide = async (req, res) => {
             carImageUrl: driverData.carImageUrl || null,
             vehicleColor: driverData.vehicleColor || '#4CD964'
         };
+
+        // Safety check: Filter out any undefined keys to prevent Firestore transaction crash
+        Object.keys(driverDetails).forEach(key => {
+            if (driverDetails[key] === undefined) {
+                console.warn(`[AcceptRide] Field ${key} is undefined, removing...`);
+                delete driverDetails[key];
+            }
+        });
 
         const ride = await rideService.acceptRide(rideId, driverId, driverDetails);
 

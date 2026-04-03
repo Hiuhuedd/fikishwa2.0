@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Animated, Platform } from 'react-native';
 import { Home, Clock, User, Shield, HelpCircle, LogOut, X } from 'lucide-react-native';
 
 interface CustomerSidebarProps {
@@ -179,6 +179,7 @@ const styles = StyleSheet.create({
     },
     footer: {
         padding: 24,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 32,
         borderTopWidth: 1,
         borderTopColor: '#f0f0f0',
     },

@@ -16,6 +16,7 @@ const {
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const smsService = require('./smsService');
+const emailService = require('./emailService');
 
 class CustomerAuthService {
     constructor() {
@@ -25,13 +26,15 @@ class CustomerAuthService {
     }
 
     async sendOtp(phone, ipAddress) {
-        const normalizedPhone = smsService.normalizePhone(phone);
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
         const expiresAt = Timestamp.fromDate(new Date(Date.now() + 5 * 60 * 1000));
 
+        const isEmail = phone.includes('@');
+        const identifier = isEmail ? phone.trim().toLowerCase() : smsService.normalizePhone(phone);
+
         const docRef = await addDoc(collection(this.db, 'otpSessions'), {
-            phone: normalizedPhone,
+            phone: identifier,
             hashedOtp: hashedOtp,
             attempts: 0,
             expiresAt: expiresAt,
@@ -45,11 +48,18 @@ class CustomerAuthService {
         // Print the OTP explicitly in the console for development testing
         console.log(`\n================================`);
         console.log(`🔑 DEVELOPMENT OTP BYPASS:`);
-        console.log(`📱 Phone: ${normalizedPhone}`);
+        console.log(`📱 Destination: ${identifier}`);
         console.log(`🔢 Code:  ${otp}`);
         console.log(`================================\n`);
 
-        await smsService.sendSMS(normalizedPhone, message, "system", "auth_otp");
+        // Send via Email if it is an email address
+        if (isEmail) {
+            console.log(`📨 Attempting Email delivery to ${identifier}...`);
+            await emailService.sendOtpEmail(identifier, otp);
+        } else {
+            // Default to SMS
+            await smsService.sendSMS(identifier, message, "system", "auth_otp");
+        }
 
         return sessionId;
     }
@@ -82,11 +92,18 @@ class CustomerAuthService {
         // OTP Valid
         await deleteDoc(sessionRef);
 
-        const phone = sessionData.phone;
+        const identifier = sessionData.phone;
+        const isEmail = identifier.includes('@');
 
-        // Check if customer exists in Firestore
+        // Check if customer exists in Firestore (check both phone and email)
         const customersRef = collection(this.db, 'customers');
-        const q = query(customersRef, where("phone", "==", phone));
+        let q;
+        if (isEmail) {
+            q = query(customersRef, where("email", "==", identifier));
+        } else {
+            q = query(customersRef, where("phone", "==", identifier));
+        }
+
         const querySnapshot = await getDocs(q);
 
         let uid;
@@ -108,25 +125,28 @@ class CustomerAuthService {
             customerDocRef = doc(this.db, 'customers', uid);
 
             // Initialize with default values
-            await setDoc(customerDocRef, {
+            const userData = {
                 uid: uid,
-                phone: phone,
+                phone: isEmail ? '' : identifier,
+                email: isEmail ? identifier : '',
                 name: '',
                 profilePhotoUrl: '',
                 emergencyContact: '',
                 createdAt: Timestamp.now(),
                 lastLoginAt: Timestamp.now(),
                 rideHistorySummary: { totalRides: 0, totalSpent: 0 }
-            });
+            };
+
+            await setDoc(customerDocRef, userData);
         }
 
         // Fetch final profile
         const finalDoc = await getDoc(customerDocRef);
         const userProfile = finalDoc.data();
 
-        // Generate standard JWT instead of Firebase Custom Token
+        // Generate standard JWT
         const token = jwt.sign(
-            { uid: uid, phone: phone, role: 'customer' },
+            { uid: uid, identifier: identifier, role: 'customer' },
             this.jwtSecret,
             { expiresIn: this.jwtExpiresIn }
         );
@@ -148,6 +168,8 @@ class CustomerAuthService {
 
         const updatePayload = {};
         if (profileData.name) updatePayload.name = profileData.name;
+        if (profileData.email) updatePayload.email = profileData.email;
+        if (profileData.phone) updatePayload.phone = profileData.phone;
         if (profileData.profilePhotoUrl) updatePayload.profilePhotoUrl = profileData.profilePhotoUrl;
         if (profileData.emergencyContact) updatePayload.emergencyContact = profileData.emergencyContact;
         if (profileData.homeLocation) updatePayload.homeLocation = profileData.homeLocation;

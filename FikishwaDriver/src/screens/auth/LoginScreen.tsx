@@ -6,6 +6,8 @@ import api from '../../services/api';
 import driverApiService from '../../services/driverApiService';
 import { Car, Mail, Lock, LogIn } from 'lucide-react-native';
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const LoginScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -15,6 +17,11 @@ const LoginScreen = () => {
     const handleLogin = async () => {
         if (!email || !password) {
             Alert.alert('Error', 'Please enter both email and password');
+            return;
+        }
+
+        if (!emailRegex.test(email)) {
+            Alert.alert('Invalid Email', 'Please enter a valid email address.');
             return;
         }
 
@@ -39,7 +46,7 @@ const LoginScreen = () => {
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.header}>
                     <View style={styles.logoContainer}>
-                        <Car size={48} color="#007AFF" />
+                        <Car size={48} color="#001C3D" />
                     </View>
                     <Text style={styles.title}>Fikishwa Driver</Text>
                     <Text style={styles.subtitle}>Log in to start your shift</Text>
@@ -116,11 +123,11 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 20,
-        backgroundColor: '#F0F7FF',
+        backgroundColor: '#E6F0FF',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
-        shadowColor: '#000',
+        shadowColor: '#001C3D',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
@@ -160,13 +167,13 @@ const styles = StyleSheet.create({
     },
     loginButton: {
         height: 56,
-        backgroundColor: '#007AFF',
+        backgroundColor: '#001C3D',
         borderRadius: 12,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         marginTop: 8,
-        shadowColor: '#007AFF',
+        shadowColor: '#001C3D',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
@@ -187,7 +194,7 @@ const styles = StyleSheet.create({
         fontSize: 15,
     },
     signupLink: {
-        color: '#007AFF',
+        color: '#001C3D',
         fontSize: 15,
         fontWeight: '600',
     },

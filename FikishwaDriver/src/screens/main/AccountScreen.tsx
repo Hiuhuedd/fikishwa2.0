@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     headerTitle: { fontSize: 20, fontWeight: '700', color: '#1E293B' },
     scrollContent: { padding: 20 },
     profileSection: { alignItems: 'center', marginBottom: 32 },
-    avatarLarge: { width: 96, height: 96, borderRadius: 48, backgroundColor: '#4A1D24', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+    avatarLarge: { width: 96, height: 96, borderRadius: 48, backgroundColor: '#001C3D', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
     profileName: { fontSize: 24, fontWeight: '800', color: '#1E293B' },
     profileHandle: { fontSize: 16, color: '#64748B', marginTop: 4 },
     section: { backgroundColor: '#fff', borderRadius: 20, padding: 8, marginBottom: 24, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 15 },
