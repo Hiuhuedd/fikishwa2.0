@@ -406,3 +406,33 @@ exports.verifyDocument = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+/**
+ * Update driver phone number
+ */
+exports.updateDriverPhone = async (req, res) => {
+    try {
+        const { driverId } = req.params;
+        const { phone } = req.body;
+
+        if (!phone) {
+            return res.status(400).json({ success: false, message: 'Phone number is required' });
+        }
+
+        const driverRef = doc(db, 'drivers', driverId);
+        await runTransaction(db, async (transaction) => {
+            const driverDoc = await transaction.get(driverRef);
+            if (!driverDoc.exists()) throw new Error('Driver not found');
+
+            transaction.update(driverRef, {
+                phone: phone,
+                updatedAt: serverTimestamp()
+            });
+        });
+
+        res.json({ success: true, message: 'Driver phone number updated successfully' });
+    } catch (error) {
+        console.error('Update Driver Phone Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};

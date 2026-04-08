@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { Navigation, CheckCircle2, CreditCard, MapPin } from 'lucide-react-native';
 
 interface ActiveRidePhaseCardProps {
     status: string;
+    isLoading?: boolean;
     onArrived: () => void;
     onStartRide: () => void;
     onCompleteRide: () => void;
@@ -14,6 +14,7 @@ interface ActiveRidePhaseCardProps {
 
 const ActiveRidePhaseCard = ({
     status,
+    isLoading = false,
     onArrived,
     onStartRide,
     onCompleteRide,
@@ -23,9 +24,19 @@ const ActiveRidePhaseCard = ({
     if (status === 'accepted' || status === 'picking_up') {
         return (
             <View style={styles.phaseContainer}>
-                <TouchableOpacity style={styles.bigActionBtnPrimary} onPress={onArrived}>
-                    <Navigation size={24} color="#fff" style={{ marginRight: 10 }} />
-                    <Text style={styles.bigActionBtnText}>I HAVE ARRIVED</Text>
+                <TouchableOpacity
+                    style={[styles.bigActionBtnPrimary, isLoading && styles.disabledBtn]}
+                    onPress={onArrived}
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                        <>
+                            <Navigation size={24} color="#fff" style={{ marginRight: 10 }} />
+                            <Text style={styles.bigActionBtnText}>I HAVE ARRIVED</Text>
+                        </>
+                    )}
                 </TouchableOpacity>
             </View>
         );
@@ -35,9 +46,19 @@ const ActiveRidePhaseCard = ({
         return (
             <View style={styles.phaseContainer}>
                 <Text style={styles.phaseTitle}>PICKUP CUSTOMER</Text>
-                <TouchableOpacity style={[styles.bigActionBtnPrimary, { backgroundColor: colors.success }]} onPress={onStartRide}>
-                    <CheckCircle2 size={24} color="#fff" style={{ marginRight: 10 }} />
-                    <Text style={styles.bigActionBtnText}>START RIDE</Text>
+                <TouchableOpacity
+                    style={[styles.bigActionBtnPrimary, { backgroundColor: colors.success }, isLoading && styles.disabledBtn]}
+                    onPress={onStartRide}
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                        <>
+                            <CheckCircle2 size={24} color="#fff" style={{ marginRight: 10 }} />
+                            <Text style={styles.bigActionBtnText}>START RIDE</Text>
+                        </>
+                    )}
                 </TouchableOpacity>
             </View>
         );
@@ -47,9 +68,19 @@ const ActiveRidePhaseCard = ({
         return (
             <View style={styles.phaseContainer}>
                 <Text style={styles.phaseTitle}>TRIP IN PROGRESS</Text>
-                <TouchableOpacity style={[styles.bigActionBtnPrimary, { backgroundColor: colors.error }]} onPress={onCompleteRide}>
-                    <MapPin size={24} color="#fff" style={{ marginRight: 10 }} />
-                    <Text style={styles.bigActionBtnText}>COMPLETE TRIP</Text>
+                <TouchableOpacity
+                    style={[styles.bigActionBtnPrimary, { backgroundColor: colors.error }, isLoading && styles.disabledBtn]}
+                    onPress={onCompleteRide}
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                        <>
+                            <MapPin size={24} color="#fff" style={{ marginRight: 10 }} />
+                            <Text style={styles.bigActionBtnText}>COMPLETE TRIP</Text>
+                        </>
+                    )}
                 </TouchableOpacity>
             </View>
         );
@@ -59,9 +90,19 @@ const ActiveRidePhaseCard = ({
         return (
             <View style={styles.phaseContainer}>
                 <Text style={styles.phaseTitle}>TRIP SUMMARY</Text>
-                <TouchableOpacity style={[styles.bigActionBtnPrimary, { backgroundColor: colors.info }]} onPress={onConfirmPayment}>
-                    <CreditCard size={24} color="#fff" style={{ marginRight: 10 }} />
-                    <Text style={styles.bigActionBtnText}>CONFIRM PAYMENT</Text>
+                <TouchableOpacity
+                    style={[styles.bigActionBtnPrimary, { backgroundColor: colors.info }, isLoading && styles.disabledBtn]}
+                    onPress={onConfirmPayment}
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                        <>
+                            <CreditCard size={24} color="#fff" style={{ marginRight: 10 }} />
+                            <Text style={styles.bigActionBtnText}>CONFIRM PAYMENT</Text>
+                        </>
+                    )}
                 </TouchableOpacity>
             </View>
         );
@@ -97,6 +138,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 8,
         elevation: 6
+    },
+    disabledBtn: {
+        opacity: 0.7
     },
     bigActionBtnText: {
         color: '#fff',

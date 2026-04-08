@@ -21,6 +21,7 @@ import RateDriverScreen from '../screens/main/RateDriverScreen';
 import RideHistoryScreen from '../screens/main/RideHistoryScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import CouponScreen from '../screens/main/CouponScreen';
+import SavedPlacesScreen from '../screens/main/SavedPlacesScreen';
 
 const AuthStack = createNativeStackNavigator();
 const MainStack = createNativeStackNavigator();
@@ -46,6 +47,7 @@ const MainNavigator = () => (
         <MainStack.Screen name="RideHistory" component={RideHistoryScreen} />
         <MainStack.Screen name="Profile" component={ProfileScreen} />
         <MainStack.Screen name="Coupons" component={CouponScreen} />
+        <MainStack.Screen name="SavedPlaces" component={SavedPlacesScreen} />
     </MainStack.Navigator>
 );
 

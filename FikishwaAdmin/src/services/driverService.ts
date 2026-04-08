@@ -157,6 +157,16 @@ export const verifyDocument = async (driverId: string, docKey: string, status: '
     return response.data;
 };
 
+/**
+ * Update driver phone number
+ */
+export const updateDriverPhone = async (driverId: string, phone: string): Promise<DriverActionResponse> => {
+    const response = await api.post<DriverActionResponse>(`/api/admin/drivers/${driverId}/update-phone`, {
+        phone,
+    });
+    return response.data;
+};
+
 export default {
     getPendingDrivers,
     getAllDrivers,
@@ -165,5 +175,6 @@ export default {
     rejectDriver,
     toggleDriverStatus,
     verifyDriverAction,
-    updateDriverCategory
+    updateDriverCategory,
+    updateDriverPhone
 };

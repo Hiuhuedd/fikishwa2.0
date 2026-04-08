@@ -6,14 +6,17 @@ const CONFIG_DOC_ID = 'global';
 
 // Default configuration values
 const DEFAULT_CONFIG = {
-    commissionRate: 0.03,
+    commissionRate: 0.2,
     taxRate: 0.16,
     perKmRate: { inperson: 50, parcel: 60 },
     perMinRate: { inperson: 10, parcel: 12 },
     perStopFee: 100,
     baseFare: { inperson: 200, parcel: 250 },
-    maxOwedCommission: 4000,
+    maxOwedCommission: 400,
+    paybillNumber: "4005473",
     reminderThresholds: [1000, 2000, 3000],
+    supportEmail: "edwardhiuhu0@gmail.com",
+    supportPhone: "+254743466032",
     surgeMultiplier: 1.0,
     updatedAt: null,
     updatedBy: null

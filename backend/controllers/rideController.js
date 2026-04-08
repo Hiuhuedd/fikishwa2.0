@@ -232,8 +232,8 @@ exports.getRideHistory = async (req, res) => {
         const q = query(
             ridesRef,
             where('customerId', '==', customerId),
-            where('status', '==', 'completed'),
-            orderBy('completedAt', 'desc'),
+            where('status', 'in', ['completed', 'cancelled', 'cancelled_no_drivers']),
+            orderBy('updatedAt', 'desc'),
             firestoreLimit(limit)
         );
 
@@ -242,17 +242,40 @@ exports.getRideHistory = async (req, res) => {
 
         snapshot.forEach(doc => {
             const data = doc.data();
+            const formatDate = (val) => {
+                if (!val) return null;
+                // Handle Firestore Timestamp (JS SDK)
+                if (typeof val.toDate === 'function') return val.toDate().toISOString();
+                // Handle serialized Firestore Timestamp (seconds/nanoseconds)
+                if (val.seconds !== undefined) return new Date(val.seconds * 1000).toISOString();
+                if (val._seconds !== undefined) return new Date(val._seconds * 1000).toISOString();
+                // Already a Date?
+                if (val instanceof Date) return val.toISOString();
+                // Handle numeric timestamps (ms)
+                if (typeof val === 'number') return new Date(val).toISOString();
+                // Already a string? Check if it's a valid date string
+                if (typeof val === 'string') {
+                    const d = new Date(val);
+                    return !isNaN(d.getTime()) ? d.toISOString() : null;
+                }
+                return null;
+            };
+
             rides.push({
                 rideId: doc.id,
-                date: data.completedAt,
-                pickup: data.pickup.address,
-                dropoff: data.dropoff.address,
-                stops: data.stops?.map(s => s.address) || [],
-                distance: data.actualDistanceKm || data.distanceKm,
-                duration: data.actualDurationMin || data.durationMin,
-                fare: data.finalFare || data.estimatedFare,
+                date: formatDate(data.completedAt || data.cancelledAt || data.updatedAt || data.createdAt),
+                completedAt: formatDate(data.completedAt),
+                cancelledAt: formatDate(data.cancelledAt),
+                status: data.status || 'unknown',
+                pickup: data.pickup, // Full object
+                dropoff: data.dropoff, // Full object
+                stops: data.stops || [],
+                distance: data.actualDistanceKm || data.distanceKm || 0,
+                duration: data.actualDurationMin || data.durationMin || 0,
+                fare: data.finalFare || data.estimatedFare || 0,
                 paymentMethod: data.paymentMethod,
                 driverName: data.driverDetails?.name || 'Driver',
+                driverDetails: data.driverDetails || null,
                 driverRating: data.driverRating?.stars || null,
                 yourRating: data.customerRating?.stars || null
             });

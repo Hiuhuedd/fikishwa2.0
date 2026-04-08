@@ -22,6 +22,7 @@ router.get('/:driverId', adminDriverController.getDriverDetails);
 router.post('/:driverId/approve', adminDriverController.approveDriver);
 router.post('/:driverId/reject', adminDriverController.rejectDriver);
 router.post('/:driverId/update-category', adminDriverController.updateDriverCategory);
+router.post('/:driverId/update-phone', adminDriverController.updateDriverPhone);
 router.post('/:driverId/verify-document', adminDriverController.verifyDocument);
 
 module.exports = router;

@@ -43,10 +43,10 @@ export interface Colors {
 
 export const lightColors: Colors = {
     // Brand
-    primary: '#c4900dff',        // Thick Gold — richer & darker
-    primaryDark: '#9b7616ff',
-    primaryLight: '#FFF8E1',
-    secondary: '#1E293B',      // Slate accent
+    primary: '#D4AF37',        // Premium Metallic Gold
+    primaryDark: '#B8860B',    // Dark Goldenrod
+    primaryLight: '#F5E6BE',   // Soft Champagne / Light Gold
+    secondary: '#001C3D',      // Navy Blue accent for contrast
 
     // Backgrounds
     background: '#FFFFFF',     // Clean white background for onboarding
@@ -81,10 +81,10 @@ export const lightColors: Colors = {
 
 export const darkColors: Colors = {
     // Brand
-    primary: '#B8860B',        // Thick Gold
-    primaryDark: '#8B6508',
+    primary: '#D4AF37',        // Metallic Gold
+    primaryDark: '#B8860B',
     primaryLight: '#334155',
-    secondary: '#64748B',
+    secondary: '#94A3B8',
 
     // Backgrounds
     background: '#0F172A',
@@ -98,7 +98,7 @@ export const darkColors: Colors = {
     textSecondary: '#94A3B8',
     textTertiary: '#64748B',
     textInverse: '#0F172A',
-    textOnPrimary: '#FFFFFF', // White text looks better on darker gold
+    textOnPrimary: '#FFFFFF',
 
     // Status
     success: '#10B981',

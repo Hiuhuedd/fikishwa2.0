@@ -176,6 +176,8 @@ const calculateEstimate = async (distanceMeters, durationSeconds, stopCount, rid
         return {
             estimatedFare: Math.ceil(total),
             originalFare: Math.ceil(total),
+            distanceKm: parseFloat(distanceKm.toFixed(2)),
+            durationMin: Math.ceil(durationMin || (distanceKm * 2)), // Fallback duration if missing
             breakdown: { baseFare: rates.baseFare, distanceFee: Math.ceil(distanceKm * rates.perKm) }
         };
     }

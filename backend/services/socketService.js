@@ -5,19 +5,7 @@ const userSockets = new Map(); // userId -> socketId
 const driverLocations = new Map(); // Map<userId, {lat, lng, heading, lastUpdate}>
 
 // Mock Data for Testing (only used if no real drivers online)
-const MOCK_DRIVER_IDS = new Set(['mock_driver_1', 'mock_driver_2']);
-driverLocations.set('mock_driver_1', {
-    lat: -1.2864,
-    lng: 36.8172,
-    heading: 45,
-    lastUpdate: new Date().toISOString()
-});
-driverLocations.set('mock_driver_2', {
-    lat: -1.2880,
-    lng: 36.8200,
-    heading: 180,
-    lastUpdate: new Date().toISOString()
-});
+// Removed mock drivers to use real matching logic
 
 const initSocket = (server) => {
     io = new Server(server, {
@@ -105,10 +93,7 @@ const initSocket = (server) => {
             for (let [userId, socketId] of userSockets.entries()) {
                 if (socketId === socket.id) {
                     userSockets.delete(userId);
-                    // Only remove from available drivers if it was a real driver (not mock)
-                    if (!MOCK_DRIVER_IDS.has(userId)) {
-                        driverLocations.delete(userId);
-                    }
+                    driverLocations.delete(userId);
 
                     // Notify customers of the updated list
                     const drivers = Array.from(driverLocations.entries()).map(([id, loc]) => ({
@@ -178,11 +163,16 @@ const getAvailableDrivers = () => {
     }));
 };
 
+const getDriverLocation = (driverId) => {
+    return driverLocations.get(driverId) || null;
+};
+
 module.exports = {
     initSocket,
     getIO,
     emitToUser,
     emitToDrivers,
     emitToNearbyDrivers,
-    getAvailableDrivers
+    getAvailableDrivers,
+    getDriverLocation
 };

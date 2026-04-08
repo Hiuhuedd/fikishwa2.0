@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
-    StatusBar, Alert, ActivityIndicator, TextInput,
+    StatusBar, Alert, ActivityIndicator, TextInput, Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
@@ -40,6 +40,18 @@ const RateDriverScreen = () => {
             <View style={[styles.content, { paddingHorizontal: spacing.screenPadding }]}>
                 {/* Success mark */}
                 <Text style={styles.emoji}>🎉</Text>
+                {/* Driver Avatar */}
+                <View style={[styles.avatarContainer, { backgroundColor: colors.primary + '15' }]}>
+                    {driver?.profilePhotoUrl || driver?.profileImage ? (
+                        <Image
+                            source={{ uri: driver.profilePhotoUrl || driver.profileImage }}
+                            style={styles.avatarImg}
+                        />
+                    ) : (
+                        <Text style={{ fontSize: 32 }}>👤</Text>
+                    )}
+                </View>
+
                 <Text style={[styles.title, { color: colors.textPrimary }]}>You've arrived!</Text>
                 <Text style={[styles.sub, { color: colors.textSecondary, fontSize: fontSizes.md }]}>
                     How was your ride with{' '}
@@ -97,6 +109,13 @@ const RateDriverScreen = () => {
 const styles = StyleSheet.create({
     safe: { flex: 1 },
     content: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    avatarContainer: {
+        width: 80, height: 80, borderRadius: 24,
+        backgroundColor: '#F1F5F9', justifyContent: 'center',
+        alignItems: 'center', marginBottom: 20,
+        overflow: 'hidden',
+    },
+    avatarImg: { width: '100%', height: '100%', resizeMode: 'cover' },
     emoji: { fontSize: 64, marginBottom: 16 },
     title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5, marginBottom: 10 },
     sub: { textAlign: 'center', marginBottom: 32 },

@@ -14,6 +14,7 @@ interface User {
     idBackUrl?: string;
     licenseUrl?: string;
     goodConductUrl?: string;
+    profilePhotoUrl?: string;
     carMake?: string;
     carModel?: string;
     carYear?: string;
@@ -28,6 +29,10 @@ interface User {
     inspectionExpiry?: string;
     status: 'active' | 'disabled';
     rejectedReason?: string;
+    averageRating?: number;
+    totalRides?: number;
+    totalEarnings?: number;
+    totalRatingsCount?: number;
 }
 
 interface AuthState {
@@ -41,6 +46,7 @@ interface AuthState {
     setPhoneNumber: (phone: string) => void;
     setSessionId: (id: string) => void;
     setAuth: (user: User, token: string) => Promise<void>;
+    updateUser: (user: User) => Promise<void>;
     logout: () => Promise<void>;
     initialize: () => Promise<void>;
 }
@@ -73,6 +79,15 @@ export const useAuthStore = create<AuthState>((set) => ({
         } catch (error) {
             console.error('Error saving auth state:', error);
             set({ error: 'Failed to save login session' });
+        }
+    },
+
+    updateUser: async (user) => {
+        try {
+            await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+            set({ user });
+        } catch (error) {
+            console.error('Error updating user state:', error);
         }
     },
 

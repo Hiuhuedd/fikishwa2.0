@@ -1,18 +1,21 @@
 import React, { forwardRef } from 'react';
 import { View, Image as RNImage, StyleSheet } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
+import { decodePolyline } from '../utils/mapUtils';
 
 const carMarkerImg = require('../assets/images/car_marker.png');
 
 interface RideMapProps {
     location: any;
     activeRide: any;
+    currentRequest: any; // Added for pre-acceptance visualization
     initialRegion: any;
     googleMapsApiKey: string;
 }
 
-const RideMap = forwardRef<MapView, RideMapProps>(({ location, activeRide, initialRegion, googleMapsApiKey }, ref) => {
+const RideMap = forwardRef<MapView, RideMapProps>(({ location, activeRide, currentRequest, initialRegion, googleMapsApiKey }, ref) => {
+
     return (
         <MapView
             ref={ref}
@@ -33,6 +36,7 @@ const RideMap = forwardRef<MapView, RideMapProps>(({ location, activeRide, initi
                 </Marker>
             )}
 
+            {/* Active Ride Visualization */}
             {activeRide && (
                 <>
                     <Marker
@@ -53,18 +57,76 @@ const RideMap = forwardRef<MapView, RideMapProps>(({ location, activeRide, initi
                     />
                     <MapViewDirections
                         origin={location ? { latitude: location.coords.latitude, longitude: location.coords.longitude } : { latitude: activeRide.pickup.lat || activeRide.pickup.latitude, longitude: activeRide.pickup.lng || activeRide.pickup.longitude }}
-                        destination={{ latitude: activeRide.dropoff.lat || activeRide.dropoff.latitude, longitude: activeRide.dropoff.lng || activeRide.dropoff.longitude }}
-                        waypoints={activeRide.status !== 'in_progress' ? [{ latitude: activeRide.pickup.lat || activeRide.pickup.latitude, longitude: activeRide.pickup.lng || activeRide.pickup.longitude }] : []}
+                        destination={
+                            activeRide.status === 'in_progress'
+                                ? { latitude: activeRide.dropoff.lat || activeRide.dropoff.latitude, longitude: activeRide.dropoff.lng || activeRide.dropoff.longitude }
+                                : { latitude: activeRide.pickup.lat || activeRide.pickup.latitude, longitude: activeRide.pickup.lng || activeRide.pickup.longitude }
+                        }
                         apikey={googleMapsApiKey}
-                        strokeWidth={4}
+                        strokeWidth={5}
                         strokeColor="#007AFF"
                         onReady={(result) => {
                             (ref as any).current?.fitToCoordinates(result.coordinates, {
                                 edgePadding: { top: 100, right: 50, bottom: 250, left: 50 },
-                                animated: true
+                                animated: true,
                             });
                         }}
                     />
+                </>
+            )}
+
+            {/* Current/Pending Request Visualization */}
+            {currentRequest && (
+                <>
+                    {/* Markers */}
+                    <Marker
+                        coordinate={{
+                            latitude: currentRequest.pickup.lat,
+                            longitude: currentRequest.pickup.lng
+                        }}
+                        title="Pickup"
+                        pinColor="#4CD964"
+                    />
+                    <Marker
+                        coordinate={{
+                            latitude: currentRequest.dropoff.lat,
+                            longitude: currentRequest.dropoff.lng
+                        }}
+                        title="Dropoff"
+                        pinColor="#FF3B30"
+                    />
+
+                    {/* Route 1: Driver to Pickup (Blue) */}
+                    {location && (
+                        <MapViewDirections
+                            origin={{ latitude: location.coords.latitude, longitude: location.coords.longitude }}
+                            destination={{ latitude: currentRequest.pickup.lat, longitude: currentRequest.pickup.lng }}
+                            apikey={googleMapsApiKey}
+                            strokeWidth={6}
+                            strokeColor="#007AFF"
+                            lineDashPattern={[10, 10]}
+                            onReady={(result) => {
+                                // Fit map to show Driver, Pickup, and Dropoff with better padding
+                                (ref as any).current?.fitToCoordinates([
+                                    { latitude: location.coords.latitude, longitude: location.coords.longitude },
+                                    { latitude: currentRequest.pickup.lat, longitude: currentRequest.pickup.lng },
+                                    { latitude: currentRequest.dropoff.lat, longitude: currentRequest.dropoff.lng }
+                                ], {
+                                    edgePadding: { top: 180, right: 60, bottom: 250, left: 60 },
+                                    animated: true
+                                });
+                            }}
+                        />
+                    )}
+
+                    {/* Route 2: Pickup to Dropoff (Green) - Using Backend Polyline */}
+                    {currentRequest.routePolyline && (
+                        <Polyline
+                            coordinates={decodePolyline(currentRequest.routePolyline)}
+                            strokeWidth={8}
+                            strokeColor="#4CD964"
+                        />
+                    )}
                 </>
             )}
         </MapView>

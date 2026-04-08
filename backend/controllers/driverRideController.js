@@ -110,17 +110,20 @@ exports.acceptRide = async (req, res) => {
         const driverData = driverSnap.data() || {};
 
         console.log(`🚕 [AcceptRide] Fetching details for driver: ${driverId}`);
-        console.log(`🚕 [AcceptRide] Raw Driver Data from DB:`, JSON.stringify(driverData));
+        console.log(`🚕 [AcceptRide] DB averageRating:`, driverData.averageRating, `DB totalRides:`, driverData.totalRides);
+        console.log(`📸 [AcceptRide] Driver Profile Photo URL:`, driverData.profilePhotoUrl || 'NOT FOUND');
 
         const driverDetails = {
             name: driverData.name || req.user.name || 'Driver',
             phone: driverData.phone || req.user.phone || 'N/A',
-            rating: driverData.rating || 4.8,
+            rating: driverData.averageRating ?? driverData.rating ?? 5,
             vehicleMake: driverData.carMake || '',
             vehicleModel: driverData.carModel || '',
             plateNumber: driverData.plateNumber || '',
             carImageUrl: driverData.carImageUrl || null,
-            vehicleColor: driverData.vehicleColor || '#4CD964'
+            profilePhotoUrl: driverData.profilePhotoUrl || null,
+            vehicleColor: driverData.color || '#4CD964',
+            completedRides: driverData.totalRides ?? 0
         };
 
         // Safety check: Filter out any undefined keys to prevent Firestore transaction crash
@@ -294,12 +297,26 @@ exports.getRecentRides = async (req, res) => {
             rides.push({
                 rideId: doc.id,
                 date: data.completedAt,
-                pickup: data.pickup.address,
-                dropoff: data.dropoff.address,
-                distance: data.actualDistanceKm || data.distanceKm,
-                duration: data.actualDurationMin || data.durationMin,
-                fare: data.finalFare || data.estimatedFare,
-                earnings: (data.finalFare || data.estimatedFare) * 0.97,
+                createdAt: data.completedAt, // Alias for frontend
+                pickup: data.pickup, // Full object for map
+                pickupAddress: data.pickup?.address || 'Trip',
+                dropoff: data.dropoff, // Full object for map
+                destinationAddress: data.dropoff?.address || 'Trip',
+                distance: data.actualDistanceKm || data.distanceKm || 0,
+                duration: data.actualDurationMin || data.durationMin || 0,
+                fare: data.finalFare || data.estimatedFare || 0,
+                commission: data.commission || 0,
+                baseCommission: data.baseCommission || 0,
+                commissionRate: data.commissionRate || 0,
+                vat: data.vat || 0,
+                driverShare: data.driverShare || 0,
+                rideType: data.rideType || 'fikaa',
+                vehicleCategory: data.vehicleCategory || 'standard',
+                paymentMethod: data.paymentMethod || 'cash',
+                customerName: data.customerName || 'Customer',
+                routePolyline: data.routePolyline || null,
+                parcelDetails: data.parcelDetails || null,
+                status: data.status,
                 customerRating: data.customerRating?.stars || null,
                 ratingComment: data.customerRating?.comment || null
             });

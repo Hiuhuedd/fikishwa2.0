@@ -30,12 +30,15 @@ const RideInfoCard = ({
                     <View style={styles.avatarSmall}>
                         <User size={24} color={colors.textPrimary} />
                     </View>
-                    <View style={{ marginLeft: spacing.md }}>
+                    <View style={{ marginLeft: spacing.md, flex: 1 }}>
                         <Text style={{ fontSize: 18, fontWeight: '800', color: colors.textPrimary }}>
                             {activeRide.customerName || 'Customer'}
                         </Text>
-                        <Text style={{ fontSize: 13, color: colors.textSecondary, fontWeight: '500' }}>
-                            ID: {activeRide.rideId?.substring(0, 8)}
+                        <Text style={{ fontSize: 12, color: colors.success, fontWeight: '700', marginTop: 2 }}>
+                            PICKUP: {activeRide.pickup?.address || 'See Map'}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: colors.primary, fontWeight: '700', marginTop: 1 }}>
+                            DROP: {activeRide.dropoff?.address || 'See Map'}
                         </Text>
                     </View>
                 </View>

@@ -27,17 +27,33 @@ const HistoryScreen = () => {
 
     const RideItem = ({ ride }: any) => {
         if (!ride) return null;
+
+        // Date helper (handles Firestore timestamps vs ISO strings)
+        const formatRideDate = (dateVal: any) => {
+            if (!dateVal) return 'N/A';
+            if (dateVal.toDate && typeof dateVal.toDate === 'function') {
+                return dateVal.toDate().toLocaleDateString();
+            }
+            if (dateVal.seconds) { // Raw timestamp object
+                return new Date(dateVal.seconds * 1000).toLocaleDateString();
+            }
+            return new Date(dateVal).toLocaleDateString();
+        };
+
         return (
-            <TouchableOpacity style={styles.rideItem}>
+            <TouchableOpacity
+                style={styles.rideItem}
+                onPress={() => navigation.navigate('RideDetail' as any, { ride })}
+            >
                 <View style={styles.rideHeader}>
                     <View style={styles.dateContainer}>
                         <Calendar size={14} color="#64748B" />
                         <Text style={styles.dateText}>
-                            {ride.createdAt ? new Date(ride.createdAt).toLocaleDateString() : 'N/A'}
+                            {formatRideDate(ride.createdAt || ride.date)}
                         </Text>
                     </View>
                     <Text style={styles.amountText}>
-                        KES {ride.fare ? Number(ride.fare).toFixed(2) : '0.00'}
+                        KES {Number(ride.fare || ride.finalFare || 0).toFixed(2)}
                     </Text>
                 </View>
 
@@ -49,10 +65,10 @@ const HistoryScreen = () => {
                     </View>
                     <View style={styles.addressList}>
                         <Text style={styles.addressText} numberOfLines={1}>
-                            {ride.pickupAddress || 'Unknown Pickup'}
+                            {(ride.pickupAddress || ride.pickup || 'Unknown Pickup').toString()}
                         </Text>
                         <Text style={styles.addressText} numberOfLines={1}>
-                            {ride.destinationAddress || 'Unknown Destination'}
+                            {(ride.destinationAddress || ride.dropoff || 'Unknown Destination').toString()}
                         </Text>
                     </View>
                 </View>
@@ -85,7 +101,7 @@ const HistoryScreen = () => {
             ) : (
                 <FlatList
                     data={rides}
-                    keyExtractor={(item: any) => item._id}
+                    keyExtractor={(item: any) => item.rideId || item._id}
                     renderItem={({ item }) => <RideItem ride={item} />}
                     contentContainerStyle={styles.listContent}
                     ListEmptyComponent={

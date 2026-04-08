@@ -91,12 +91,19 @@ const HomeScreen = () => {
 
     // Robust Auto-Zoom when both map and location are ready
     useEffect(() => {
-        if (isMapReady && location && !hasSnapped.current && !isSelectingSavedPlace) {
-            console.log('[HomeScreen] Auto-zoom triggered by MapReady/Location sync');
-            hasSnapped.current = true;
-            animateZoomIn(location.lng, location.lat);
+        if (isMapReady && location && !isSelectingSavedPlace) {
+            if (!hasSnapped.current) {
+                console.log('[HomeScreen] Auto-zoom triggered by MapReady/Location sync');
+                hasSnapped.current = true;
+                animateZoomIn(location.lng, location.lat, availableDrivers);
+            } else if (availableDrivers.length > 0 && hasSnapped.current === true) {
+                // If we snapped to just user before, and now drivers are here, snap again ONCE
+                console.log('[HomeScreen] Snapping again with drivers');
+                hasSnapped.current = 'withDrivers' as any;
+                animateZoomIn(location.lng, location.lat, availableDrivers);
+            }
         }
-    }, [isMapReady, location, isSelectingSavedPlace]);
+    }, [isMapReady, location, isSelectingSavedPlace, availableDrivers]);
 
     /**
      * Socket Connection and Drivers
@@ -140,7 +147,7 @@ const HomeScreen = () => {
             });
 
             socketService.on('ride-matched', (data: any) => {
-                console.log('[HomeScreen] Ride Matched:', data);
+                console.log('[HomeScreen] DEBUG - Ride Matched DATA:', JSON.stringify(data));
                 setActiveRide(data.ride || data);
                 setRideStatus('matched');
             });
@@ -204,17 +211,37 @@ const HomeScreen = () => {
     }, [user, appState]);
 
     /**
-     * Animate camera to location
+     * Animate camera to show user and nearby drivers
      */
-    const animateZoomIn = (longitude: number, latitude: number) => {
+    const animateZoomIn = (longitude: number, latitude: number, drivers: any[] = []) => {
         try {
-            console.log('[HomeScreen] Animating camera to:', latitude, longitude);
-            mapRef.current?.animateCamera({
-                center: { latitude, longitude },
-                zoom: 16, // Approx 500m area
-                pitch: 0,
-                heading: 0,
-            }, { duration: 1500 });
+            console.log('[HomeScreen] Animating camera to:', latitude, longitude, 'Drivers:', drivers.length);
+
+            if (!mapRef.current) return;
+
+            const points = [{ latitude: Number(latitude), longitude: Number(longitude) }];
+            drivers.forEach(d => {
+                if (d.location?.lat && d.location?.lng) {
+                    points.push({
+                        latitude: Number(d.location.lat),
+                        longitude: Number(d.location.lng)
+                    });
+                }
+            });
+
+            if (points.length > 1) {
+                mapRef.current.fitToCoordinates(points, {
+                    edgePadding: { top: 100, right: 100, bottom: 300, left: 100 },
+                    animated: true
+                });
+            } else {
+                mapRef.current.animateCamera({
+                    center: { latitude: Number(latitude), longitude: Number(longitude) },
+                    zoom: 16, // Approx 500m area
+                    pitch: 0,
+                    heading: 0,
+                }, { duration: 1500 });
+            }
         } catch (error) {
             console.error('[HomeScreen] Zoom animation error:', error);
         }
@@ -234,7 +261,7 @@ const HomeScreen = () => {
             // But we also snap here just in case map was already ready
             if (isMapReady && !hasSnapped.current) {
                 hasSnapped.current = true;
-                animateZoomIn(longitude, latitude);
+                animateZoomIn(longitude, latitude, availableDrivers);
             }
         } else {
             console.warn('[HomeScreen] Manual location request failed');
@@ -370,7 +397,7 @@ const HomeScreen = () => {
                             onAddPlace={(type) => {
                                 setSelectingPlaceType(type);
                                 setIsSelectingSavedPlace(true);
-                                if (location) animateZoomIn(location.lng, location.lat);
+                                if (location) animateZoomIn(location.lng, location.lat, availableDrivers);
                             }}
                             onSelectPlace={(place) => navigation.navigate('RideOptions', {
                                 pickup: { address: previewAddress || 'My current location', lat: location?.lat || -1.2864, lng: location?.lng || 36.8172 },
@@ -379,7 +406,7 @@ const HomeScreen = () => {
                             onEditPlace={(place) => {
                                 setSelectingPlaceType(place.label as any);
                                 setIsSelectingSavedPlace(true);
-                                animateZoomIn(place.lng, place.lat);
+                                animateZoomIn(place.lng, place.lat, availableDrivers);
                             }}
                         />
 
@@ -388,7 +415,16 @@ const HomeScreen = () => {
                                 colors={colors}
                                 fontSizes={fontSizes}
                                 activeRide={activeRide}
-                                onPress={() => navigation.navigate('Matching', { rideId: activeRide.rideId || activeRide.id })}
+                                onPress={() => navigation.navigate('Matching', {
+                                    rideId: activeRide.rideId || activeRide.id,
+                                    pickup: activeRide.pickup,
+                                    dropoff: activeRide.dropoff,
+                                    rideType: activeRide.rideType || activeRide.vehicleCategory,
+                                    paymentMethod: activeRide.paymentMethod,
+                                    estimatedFare: activeRide.estimatedFare,
+                                    distanceKm: activeRide.distanceKm,
+                                    durationMin: activeRide.durationMin
+                                })}
                             />
                         )}
                     </>

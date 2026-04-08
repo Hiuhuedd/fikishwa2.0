@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
     StatusBar, ScrollView, ActivityIndicator, Alert, Modal, Image,
@@ -42,6 +42,7 @@ const RideOptionsScreen = () => {
     const route = useRoute<any>();
     const { pickup, dropoff } = route.params;
     const { colors, spacing, fontSizes, insets } = useTheme();
+    const mapRef = useRef<MapView>(null);
 
     const [categories, setCategories] = useState<VehicleCategory[]>([]);
     const [selected, setSelected] = useState<string>('');
@@ -63,6 +64,40 @@ const RideOptionsScreen = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    const fitMapToDriversAndPickup = (drivers: any[]) => {
+        if (!mapRef.current || !pickup) return;
+
+        console.log('[RideOptions] Fitting map to pickup and', drivers.length, 'drivers');
+
+        const points = [
+            { latitude: Number(pickup.lat), longitude: Number(pickup.lng) }
+        ];
+
+        drivers.forEach(d => {
+            if (d.location?.lat && d.location?.lng) {
+                points.push({
+                    latitude: Number(d.location.lat),
+                    longitude: Number(d.location.lng)
+                });
+            }
+        });
+
+        if (points.length > 1) {
+            mapRef.current.fitToCoordinates(points, {
+                edgePadding: { top: 100, right: 100, bottom: 150, left: 100 },
+                animated: true
+            });
+        } else {
+            // Fallback to just show pickup if no drivers
+            mapRef.current.animateToRegion({
+                latitude: Number(pickup.lat),
+                longitude: Number(pickup.lng),
+                latitudeDelta: 0.02,
+                longitudeDelta: 0.02,
+            }, 1000);
+        }
+    };
 
     const fetchData = async () => {
         setLoading(true);
@@ -100,6 +135,11 @@ const RideOptionsScreen = () => {
                 }));
                 setCategories(mapped);
                 if (mapped.length > 0) setSelected(mapped[0].id);
+
+                // Initial fit to show pickup and drivers if available
+                setTimeout(() => {
+                    fitMapToDriversAndPickup(availableDrivers);
+                }, 500);
             } else {
                 console.error('[RideOptions] Server success but estimates missing or invalid:', res.data);
                 Alert.alert('Error', 'Server returned invalid estimate data.');
@@ -121,7 +161,12 @@ const RideOptionsScreen = () => {
             try {
                 const response = await customerApiService.getAvailableDrivers();
                 if (response.data?.success && Array.isArray(response.data.drivers)) {
-                    setAvailableDrivers(response.data.drivers);
+                    const drivers = response.data.drivers;
+                    setAvailableDrivers(drivers);
+                    // If we just got drivers for the first time, fit the map
+                    if (availableDrivers.length === 0 && drivers.length > 0) {
+                        fitMapToDriversAndPickup(drivers);
+                    }
                 }
             } catch (err) {
                 console.log('[RideOptions] Driver fetch error:', err);
@@ -130,7 +175,9 @@ const RideOptionsScreen = () => {
 
         fetchDrivers();
         socketService.on('available-drivers', (drivers: any[]) => {
-            if (Array.isArray(drivers)) setAvailableDrivers(drivers);
+            if (Array.isArray(drivers)) {
+                setAvailableDrivers(drivers);
+            }
         });
 
         const interval = setInterval(fetchDrivers, 10000); // 10s fallback poll
@@ -193,15 +240,16 @@ const RideOptionsScreen = () => {
             {/* Map Area */}
             <View style={styles.mapContainer}>
                 <MapView
+                    ref={mapRef}
                     provider={PROVIDER_GOOGLE}
                     style={StyleSheet.absoluteFillObject}
                     customMapStyle={isDarkTheme ? darkMapStyle : lightMapStyle}
                     showsUserLocation={false}
                     initialRegion={{
-                        latitude: (pickup.lat + dropoff.lat) / 2,
-                        longitude: (pickup.lng + dropoff.lng) / 2,
-                        latitudeDelta: Math.abs(pickup.lat - dropoff.lat) * 1.5 || 0.05,
-                        longitudeDelta: Math.abs(pickup.lng - dropoff.lng) * 1.5 || 0.05,
+                        latitude: Number(pickup.lat),
+                        longitude: Number(pickup.lng),
+                        latitudeDelta: 0.012,
+                        longitudeDelta: 0.012,
                     }}
                 >
                     {routeCoords.length > 0 && (

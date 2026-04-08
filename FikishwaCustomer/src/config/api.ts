@@ -2,8 +2,6 @@
  * Fikishwa Customer App - API Configuration
  */
 
-import { API_BASE_URL as ENV_API_BASE_URL } from '@env';
-
 export const API_BASE_URL = "https://fikishwa2-0-backend.onrender.com";
 
 export const API_ENDPOINTS = {

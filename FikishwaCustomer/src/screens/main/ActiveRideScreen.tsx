@@ -3,13 +3,14 @@ import {
     View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Alert, Image, Animated, Modal, ActivityIndicator, Linking, Share
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import MapView, { Marker, PROVIDER_GOOGLE, AnimatedRegion } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE, AnimatedRegion } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { useTheme } from '../../theme/ThemeContext';
 import { darkMapStyle, lightMapStyle } from '../../theme/mapStyles';
 import { socketService } from '../../services/socketService';
 import api from '../../services/api';
-import { MessageCircle, Shield, Navigation, X, Phone as PhoneIcon } from 'lucide-react-native';
+import { Phone, MessageCircle, MoreVertical, Star, Shield, Navigation, X } from 'lucide-react-native';
+import { API_BASE_URL, API_ENDPOINTS } from '../../config/api';
 import { GOOGLE_MAPS_API_KEY } from '../../config/googleMaps';
 import { decodePolyline } from '../../utils/polyline';
 import PremiumModal from '../../components/PremiumModal';
@@ -18,20 +19,42 @@ import SafetyToolkitModal from '../../components/SafetyToolkitModal';
 
 const carMarkerImg = require('../../assets/images/car_marker.png');
 
+/**
+ * Calculate the bearing between two points in degrees (0 = North, 90 = East)
+ */
+const calculateHeading = (start: { latitude: number, longitude: number }, end: { latitude: number, longitude: number }) => {
+    if (!start || !end) return 0;
+    const lat1 = start.latitude * (Math.PI / 180);
+    const lon1 = start.longitude * (Math.PI / 180);
+    const lat2 = end.latitude * (Math.PI / 180);
+    const lon2 = end.longitude * (Math.PI / 180);
+
+    const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) -
+        Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+    const brng = Math.atan2(y, x) * (180 / Math.PI);
+    return (brng + 360) % 360;
+};
+
 const ActiveRideScreen = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
-    const { rideId, pickup, dropoff, paymentMethod, estimatedFare, driver, initialStatus } = route.params || {};
+    const { rideId, pickup, dropoff, paymentMethod, estimatedFare, driver, initialStatus, initialDriverLocation, initialRouteCoords } = route.params || {};
+    console.log('🏁 [ActiveRide] DEBUG - Driver Prop:', JSON.stringify(driver));
     const { colors, fontSizes, spacing, insets } = useTheme();
     const mapRef = useRef<MapView>(null);
 
-    const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(
+        initialDriverLocation || null
+    );
     const [driverRoute, setDriverRoute] = useState<any[]>([]);
+    const [routeLoaded, setRouteLoaded] = useState(false); // flips when MapViewDirections resolves
+    const currentRouteCoordsRef = useRef<any[]>(initialRouteCoords || []);
     const lastRouteFetch = useRef<number>(0);
 
     const driverAnim = useRef(new AnimatedRegion({
-        latitude: pickup?.lat || 0,
-        longitude: pickup?.lng || 0,
+        latitude: initialDriverLocation?.latitude || pickup?.lat || 0,
+        longitude: initialDriverLocation?.longitude || pickup?.lng || 0,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
     })).current;
@@ -62,7 +85,19 @@ const ActiveRideScreen = () => {
                 const lng = data.lng;
 
                 setDriverLocation({ latitude: lat, longitude: lng });
-                setDriverHeading(data.heading || 0);
+
+                // Calculate rotation aligned with the polyline
+                let rotation = data.heading || 0;
+                if (currentRouteCoordsRef.current.length > 0) {
+                    const nextPoint = currentRouteCoordsRef.current.find(p => {
+                        const dist = Math.sqrt(Math.pow(p.latitude - lat, 2) + Math.pow(p.longitude - lng, 2));
+                        return dist > 0.0001; // aprox ~10 meters
+                    });
+                    if (nextPoint) {
+                        rotation = calculateHeading({ latitude: lat, longitude: lng }, nextPoint);
+                    }
+                }
+                setDriverHeading(rotation);
 
                 (driverAnim as any).timing({
                     latitude: lat,
@@ -98,7 +133,11 @@ const ActiveRideScreen = () => {
         socketService.on('ride-status-update', (data: any) => {
             console.log('🔄 [Customer/ActiveRide] ride-status-update received:', JSON.stringify(data));
             if (data.status === 'cancelled') {
-                Alert.alert('Ride Cancelled', 'The driver has cancelled the ride.');
+                const cancelledByCustomer = data.cancelledBy === 'customer';
+                const cancelMsg = cancelledByCustomer
+                    ? 'You have successfully cancelled this ride.'
+                    : 'The driver has cancelled the ride.';
+                Alert.alert('Ride Cancelled', cancelMsg);
                 navigation.replace('Home');
                 return;
             }
@@ -163,6 +202,33 @@ const ActiveRideScreen = () => {
         }
     };
 
+    const handleCancelRide = () => {
+        Alert.alert(
+            'Cancel Ride?',
+            'Are you sure you want to cancel this ride? A cancellation fee may apply if the driver has already arrived.',
+            [
+                { text: 'Keep Ride', style: 'cancel' },
+                {
+                    text: 'Cancel Ride',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const res = await api.post(API_ENDPOINTS.CANCEL_RIDE, {
+                                rideId,
+                                reason: 'Cancelled by customer after arrival/acceptance'
+                            });
+                            if (res.data.success) {
+                                navigation.replace('Home');
+                            }
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to cancel ride. Please try again.');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const isDarkTheme = colors.mapStyle.toString() === 'dark';
 
 
@@ -178,8 +244,8 @@ const ActiveRideScreen = () => {
                 customMapStyle={isDarkTheme ? darkMapStyle : lightMapStyle}
                 showsUserLocation={true}
                 initialRegion={{
-                    latitude: driverLocation?.latitude || pickup?.lat || 0,
-                    longitude: driverLocation?.longitude || pickup?.lng || 0,
+                    latitude: driverLocation?.latitude || pickup?.lat || pickup?.latitude || -1.286389,
+                    longitude: driverLocation?.longitude || pickup?.lng || pickup?.longitude || 36.817223,
                     latitudeDelta: 0.01,
                     longitudeDelta: 0.01,
                 }}
@@ -200,12 +266,24 @@ const ActiveRideScreen = () => {
                         strokeWidth={4}
                         strokeColor={colors.primary}
                         onReady={(result) => {
+                            setRouteLoaded(true);
+                            currentRouteCoordsRef.current = result.coordinates;
                             mapRef.current?.fitToCoordinates(result.coordinates, {
                                 edgePadding: { top: 100, right: 50, bottom: 250, left: 50 },
                                 animated: true,
                             });
                         }}
                         onError={(err) => console.log('[ActiveRide] MapViewDirections error:', err)}
+                    />
+                )}
+
+                {/* Persist initial route from MatchingScreen until MapViewDirections resolves */}
+                {!routeLoaded && initialRouteCoords && initialRouteCoords.length > 0 && (
+                    <Polyline
+                        coordinates={initialRouteCoords}
+                        strokeColor={colors.primary}
+                        strokeWidth={4}
+                        lineDashPattern={[8, 4]}
                     />
                 )}
                 {/* Car marker — always visible; animates to real location once we receive updates */}
@@ -265,23 +343,36 @@ const ActiveRideScreen = () => {
                 {driver && (
                     <View style={styles.driverRow}>
                         <View style={[styles.driverAvatar, { backgroundColor: colors.primary + '20' }]}>
-                            <Text style={{ fontSize: 28 }}>👤</Text>
+                            {driver?.profilePhotoUrl || driver?.profileImage ? (
+                                <Image
+                                    source={{ uri: driver.profilePhotoUrl || driver.profileImage }}
+                                    style={styles.avatarImage}
+                                />
+                            ) : (
+                                <Text style={{ fontSize: 28 }}>👤</Text>
+                            )}
                         </View>
                         <View style={{ flex: 1, marginLeft: 14 }}>
                             <Text style={[styles.driverName, { color: colors.textPrimary }]}>{driver.name}</Text>
-                            <Text style={{ color: colors.textSecondary, fontSize: fontSizes.sm }}>
-                                ⭐ {driver.rating} · {driver.vehicleMake} {driver.vehicleModel}
+                            <View style={styles.driverSubRow}>
+                                <Star size={12} color="#FFB800" fill="#FFB800" />
+                                <Text style={{ color: colors.textSecondary, fontSize: fontSizes.xs }}>
+                                    {driver.rating} · {(driver.completedRides || 0).toLocaleString()} trips
+                                </Text>
+                            </View>
+                            <Text style={{ color: colors.textSecondary, fontSize: fontSizes.sm, fontWeight: '600' }}>
+                                {driver.vehicleMake} {driver.vehicleModel}
                             </Text>
-                            <Text style={{ color: colors.textTertiary, fontSize: fontSizes.sm }}>{driver.plateNumber}</Text>
+                            <Text style={{ color: colors.textTertiary, fontSize: fontSizes.xs, letterSpacing: 0.5 }}>
+                                {driver.plateNumber}
+                            </Text>
                         </View>
-
-                        {/* Action buttons */}
                         <View style={styles.actionButtons}>
                             <TouchableOpacity
                                 style={[styles.actionBtn, { backgroundColor: colors.backgroundHover }]}
                                 onPress={handleCallDriver}
                             >
-                                <PhoneIcon size={18} color={colors.primary} />
+                                <Phone size={18} color={colors.primary} />
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.actionBtn, { backgroundColor: colors.backgroundHover }]}
@@ -301,14 +392,26 @@ const ActiveRideScreen = () => {
                     </Text>
                 </View>
 
-                {/* Safety button */}
-                <TouchableOpacity
-                    style={[styles.safetyBtn, { backgroundColor: colors.error + '10', borderColor: colors.error + '30' }]}
-                    onPress={() => setShowSafetyToolkit(true)}
-                >
-                    <Shield size={16} color={colors.error} />
-                    <Text style={{ color: colors.error, fontWeight: '700', marginLeft: 8, fontSize: fontSizes.sm }}>Safety Toolkit</Text>
-                </TouchableOpacity>
+                {/* Cancel/Safety Section */}
+                <View style={{ gap: 10 }}>
+                    {rideStatus !== 'in_progress' && (
+                        <TouchableOpacity
+                            style={[styles.cancelBtn, { borderColor: colors.error }]}
+                            onPress={handleCancelRide}
+                        >
+                            <X size={16} color={colors.error} />
+                            <Text style={{ color: colors.error, fontWeight: '700', marginLeft: 8, fontSize: fontSizes.sm }}>Cancel Trip</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                        style={[styles.safetyBtn, { backgroundColor: colors.error + '10', borderColor: colors.error + '30' }]}
+                        onPress={() => setShowSafetyToolkit(true)}
+                    >
+                        <Shield size={16} color={colors.error} />
+                        <Text style={{ color: colors.error, fontWeight: '700', marginLeft: 8, fontSize: fontSizes.sm }}>Safety Toolkit</Text>
+                    </TouchableOpacity>
+                </View>
 
                 <SafetyToolkitModal
                     visible={showSafetyToolkit}
@@ -392,8 +495,12 @@ const styles = StyleSheet.create({
     driverAvatar: {
         width: 56, height: 56, borderRadius: 18,
         alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
     },
-    driverName: { fontWeight: '800', fontSize: 16, marginBottom: 3 },
+    avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+    driverName: { fontWeight: '800', fontSize: 16, marginBottom: 2 },
+    driverSubRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+    carThumbnail: { width: 70, height: 40, marginRight: 10 },
     actionButtons: { gap: 8 },
     actionBtn: {
         width: 40, height: 40, borderRadius: 12,
@@ -406,6 +513,10 @@ const styles = StyleSheet.create({
     safetyBtn: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
         paddingVertical: 12, borderRadius: 14, borderWidth: 1,
+    },
+    cancelBtn: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        paddingVertical: 12, borderRadius: 14, borderWidth: 1, backgroundColor: 'transparent',
     },
     modalOverlay: {
         flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',

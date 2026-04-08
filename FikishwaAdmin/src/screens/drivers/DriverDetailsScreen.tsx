@@ -21,6 +21,7 @@ import {
     toggleDriverStatus,
     updateDriverCategory,
     verifyDocument,
+    updateDriverPhone,
     Driver
 } from '../../services/driverService';
 import { getAllCategories, VehicleCategory } from '../../services/categoryService';
@@ -37,8 +38,10 @@ const DriverDetailsScreen: React.FC = () => {
     const [rejectReason, setRejectReason] = useState('');
 
     const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+    const [phoneModalVisible, setPhoneModalVisible] = useState(false);
     const [categories, setCategories] = useState<VehicleCategory[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [editingPhone, setEditingPhone] = useState('');
 
     const fetchDetails = async () => {
         try {
@@ -144,6 +147,29 @@ const DriverDetailsScreen: React.FC = () => {
             }
         } catch (error: any) {
             Alert.alert('Error', error.message || 'Failed to update category');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleUpdatePhone = async () => {
+        if (!editingPhone.trim()) {
+            Alert.alert('Required', 'Please enter a valid phone number');
+            return;
+        }
+
+        try {
+            setActionLoading(true);
+            const response = await updateDriverPhone(driverId, editingPhone);
+            if (response.success) {
+                setPhoneModalVisible(false);
+                Alert.alert('Success', 'Driver phone number updated successfully');
+                fetchDetails();
+            } else {
+                Alert.alert('Error', response.message || 'Failed to update phone number');
+            }
+        } catch (error: any) {
+            Alert.alert('Error', error.message || 'Failed to update phone number');
         } finally {
             setActionLoading(false);
         }
@@ -267,7 +293,18 @@ const DriverDetailsScreen: React.FC = () => {
                         />
                         <View style={styles.profileInfo}>
                             <Text style={styles.name}>{driver.name}</Text>
-                            <Text style={styles.phone}>{driver.phone}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Text style={styles.phone}>{driver.phone}</Text>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setEditingPhone(driver.phone);
+                                        setPhoneModalVisible(true);
+                                    }}
+                                    style={{ marginLeft: 8 }}
+                                >
+                                    <Text style={{ color: Colors.primary, fontSize: FontSizes.sm }}>Edit</Text>
+                                </TouchableOpacity>
+                            </View>
                             <View style={[
                                 styles.statusBadge,
                                 { backgroundColor: isPending ? Colors.warning : isApproved ? Colors.success : Colors.error }
@@ -466,6 +503,47 @@ const DriverDetailsScreen: React.FC = () => {
                     </View>
                 </View>
             </Modal>
+            {/* Phone Modal */}
+            <Modal
+                visible={phoneModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setPhoneModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Update Phone Number</Text>
+                        <TextInput
+                            style={styles.phoneInput}
+                            value={editingPhone}
+                            onChangeText={setEditingPhone}
+                            placeholder="+254..."
+                            placeholderTextColor={Colors.textMuted}
+                            keyboardType="phone-pad"
+                        />
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.cancelButton]}
+                                onPress={() => setPhoneModalVisible(false)}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.saveCategoryButton]}
+                                onPress={handleUpdatePhone}
+                                disabled={actionLoading}
+                            >
+                                {actionLoading ? (
+                                    <LoadingSpinner size="small" />
+                                ) : (
+                                    <Text style={styles.saveCategoryText}>Save</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
             {/* Category Modal */}
             <Modal
                 visible={categoryModalVisible}
@@ -837,6 +915,16 @@ const styles = StyleSheet.create({
         minHeight: 100,
         textAlignVertical: 'top',
         marginBottom: Spacing.lg,
+    },
+    phoneInput: {
+        backgroundColor: Colors.background,
+        borderRadius: BorderRadius.md,
+        padding: Spacing.md,
+        color: Colors.textPrimary,
+        fontSize: FontSizes.md,
+        marginBottom: Spacing.lg,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     modalActions: {
         flexDirection: 'row',

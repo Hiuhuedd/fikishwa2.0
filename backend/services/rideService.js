@@ -50,8 +50,10 @@ const requestRide = async (customerData) => {
             dropoff,
             rideType: rideType,
             vehicleCategory: vehicleCategory, // Store category
+            customerName: customerData.customerName || 'Customer',
             paymentMethod,
             status: 'searching',
+            routePolyline: routeData.polyline,
             estimatedFare: estimate.estimatedFare,
             originalFare: estimate.originalFare, // Track original
             discountAmount: estimate.discountAmount, // Track discount
@@ -104,14 +106,23 @@ const requestRide = async (customerData) => {
         const nearbyDrivers = await matchingService.findNearbyDrivers(pickup, 10, vehicleCategory);
         const driverIds = nearbyDrivers.map(d => d.id);
 
+        console.log(`📡 [RideService] Emitting 'new-ride-request' for ride ${rideId}. Estimate:`, JSON.stringify({
+            fare: estimate.estimatedFare,
+            dist: estimate.distanceKm,
+            dur: estimate.durationMin
+        }));
+
         socketService.emitToNearbyDrivers(driverIds, 'new-ride-request', {
             rideId,
             pickup,
             stops,
             dropoff,
             rideType: rideType || 'standard',
-            vehicleCategory: vehicleCategory || 'standard', // Send to driver to show category
-            fare: estimate.estimatedFare,
+            vehicleCategory: vehicleCategory || 'standard',
+            fare: estimate.estimatedFare || 0,
+            distanceKm: estimate.distanceKm || 0,
+            durationMin: estimate.durationMin || 0,
+            routePolyline: routeData.geometry || '',
             customerName: customerData.customerName || 'Customer'
         });
 
@@ -186,11 +197,15 @@ const acceptRide = async (rideId, driverId, driverDetails) => {
             };
         });
 
-        // Notify customer
+        // Notify customer - include driverId and driver's live location so the customer
+        // app can immediately draw the route without a secondary lookup
+        const driverLiveLocation = socketService.getDriverLocation(driverId);
         socketService.emitToUser(result.customerId, 'ride-matched', {
             rideId,
             status: 'accepted',
-            driverDetails: driverDetails
+            driverId: driverId,
+            driverDetails: driverDetails,
+            driverLocation: driverLiveLocation || null
         });
 
         return {
@@ -365,6 +380,9 @@ const completeRide = async (rideId, driverId, actualDistanceKm, actualDurationMi
                 actualDistanceKm: actualDistanceKm,
                 actualDurationMin: actualDurationMin,
                 commission: commissionData.totalCommission,
+                baseCommission: commissionData.breakdown.baseCommission,
+                commissionRate: commissionData.commissionRate,
+                vat: commissionData.breakdown.tax,
                 driverShare: commissionData.driverShare,
                 completedAt: serverTimestamp(),
                 updatedAt: serverTimestamp()

@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Alert, ActivityIndicator, Modal, Image as RNImage, Linking } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { Menu, User, Power, MapPin, Navigation, ShieldCheck, Gift, ChevronRight, X } from 'lucide-react-native';
+import { Menu, User, Power, MapPin, Navigation, ShieldCheck, Gift, ChevronRight, X, AlertCircle } from 'lucide-react-native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MainStackParamList } from '../../navigation/MainNavigator';
 import api from '../../services/api';
 import driverApiService from '../../services/driverApiService';
 import socketService from '../../services/socket';
@@ -31,8 +33,10 @@ const CANCELLATION_REASONS = [
     'Other',
 ];
 
+type NavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
+
 const HomeScreen = () => {
-    const navigation = useNavigation();
+    const navigation = useNavigation<NavigationProp>();
     const [location, setLocation] = useState<Location.LocationObject | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [isOnline, setIsOnline] = useState(false);
@@ -44,7 +48,13 @@ const HomeScreen = () => {
     const [isCanceling, setIsCanceling] = useState(false);
     const [showArrivalConfirmModal, setShowArrivalConfirmModal] = useState(false);
     const [isConfirmingArrival, setIsConfirmingArrival] = useState(false);
+    const [isStartingRide, setIsStartingRide] = useState(false);
+    const [isCompletingRide, setIsCompletingRide] = useState(false);
+    const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
     const [todayEarnings, setTodayEarnings] = useState<number>(0);
+    const [owedCommission, setOwedCommission] = useState<number>(0);
+    const [isBlocked, setIsBlocked] = useState<boolean>(false);
+    const [maxCommissionLimit, setMaxCommissionLimit] = useState<number>(400);
     const [showSidebar, setShowSidebar] = useState(false);
     const [alertConfig, setAlertConfig] = useState<{
         visible: boolean;
@@ -62,7 +72,19 @@ const HomeScreen = () => {
         try {
             const response = await driverApiService.getDailyPayout();
             if (response.data.success) {
-                setTodayEarnings(response.data.summary.totalDriverShare || 0);
+                const summary = response.data.summary;
+                setTodayEarnings(summary.totalDriverShare || 0);
+                setOwedCommission(summary.currentOwedCommission || 0);
+                setIsBlocked(!!summary.isBlocked);
+                setMaxCommissionLimit(summary.maxOwedCommission || 400);
+
+                if (summary.isBlocked) {
+                    console.log('🚫 [Driver] Account check: BLOCKED due to commission');
+                    navigation.navigate('DisabledAccount', {
+                        owedAmount: summary.currentOwedCommission,
+                        maxLimit: summary.maxOwedCommission
+                    });
+                }
             }
         } catch (error) {
             console.error('Failed to fetch today earnings:', error);
@@ -224,6 +246,18 @@ const HomeScreen = () => {
                 await driverApiService.goOffline();
                 setIsOnline(false);
             } else {
+                if (isBlocked) {
+                    Alert.alert(
+                        'Account Disabled',
+                        `Your account is disabled because you owe KES ${owedCommission.toFixed(2)} in commission. Please settle your balance.`,
+                        [
+                            { text: 'Cancel', style: 'cancel' },
+                            { text: 'Pay Now', onPress: () => navigation.navigate('Earnings') }
+                        ]
+                    );
+                    setLoading(false);
+                    return;
+                }
                 if (!location) {
                     Alert.alert('Location Required', 'Please wait for your location to be determined.');
                     return;
@@ -302,6 +336,7 @@ const HomeScreen = () => {
         }
 
         try {
+            setIsStartingRide(true);
             const response = await driverApiService.startRide(id);
             if (response.data.success) {
                 setActiveRide({ ...activeRide, status: 'in_progress' });
@@ -309,6 +344,8 @@ const HomeScreen = () => {
         } catch (error: any) {
             console.error('🔴 Start Ride ERROR:', error.response?.data || error.message);
             Alert.alert('Error', 'Failed to start ride');
+        } finally {
+            setIsStartingRide(false);
         }
     };
 
@@ -321,6 +358,7 @@ const HomeScreen = () => {
         }
 
         try {
+            setIsCompletingRide(true);
             const response = await driverApiService.completeRide({
                 rideId: id,
                 actualDistanceKm: activeRide.distanceKm || 5.2,
@@ -334,6 +372,8 @@ const HomeScreen = () => {
         } catch (error: any) {
             console.error('🔴 Complete Ride ERROR:', error.response?.data || error.message);
             Alert.alert('Error', 'Failed to complete ride');
+        } finally {
+            setIsCompletingRide(false);
         }
     };
 
@@ -346,6 +386,7 @@ const HomeScreen = () => {
         }
 
         try {
+            setIsConfirmingPayment(true);
             const response = await driverApiService.confirmPayment(id);
             if (response.data.success) {
                 Alert.alert('Success', 'Payment confirmed.');
@@ -354,6 +395,8 @@ const HomeScreen = () => {
         } catch (error: any) {
             console.error('🔴 Confirm Payment ERROR:', error.response?.data || error.message);
             Alert.alert('Error', 'Failed to confirm payment');
+        } finally {
+            setIsConfirmingPayment(false);
         }
     };
 
@@ -389,6 +432,7 @@ const HomeScreen = () => {
                 ref={mapRef}
                 location={location}
                 activeRide={activeRide}
+                currentRequest={currentRequest}
                 initialRegion={{
                     latitude: location?.coords.latitude || -1.2864,
                     longitude: location?.coords.longitude || 36.8172,
@@ -409,6 +453,7 @@ const HomeScreen = () => {
                     <View style={styles.infoCard}>
                         <ActiveRidePhaseCard
                             status={activeRide?.status}
+                            isLoading={isConfirmingArrival || isStartingRide || isCompletingRide || isConfirmingPayment}
                             onArrived={handleArrived}
                             onStartRide={handleStartRide}
                             onCompleteRide={handleCompleteRide}
@@ -425,6 +470,20 @@ const HomeScreen = () => {
                             onNavigateToReferral={() => (navigation as any).navigate('Referral')}
                         />
                     </View>
+
+                    {!activeRide && owedCommission > 0 && (
+                        <TouchableOpacity
+                            style={styles.homeWarningCard}
+                            onPress={() => (navigation as any).navigate('Earnings')}
+                        >
+                            <AlertCircle size={20} color="#FF3B30" />
+                            <View style={styles.warningTextContainer}>
+                                <Text style={styles.homeWarningTitle}>Commission Owed: KES {owedCommission.toFixed(2)}</Text>
+                                <Text style={styles.homeWarningSub}>Tap to settle via M-Pesa</Text>
+                            </View>
+                            <ChevronRight size={20} color="#FF3B30" />
+                        </TouchableOpacity>
+                    )}
 
                     {!activeRide && (
                         <OnlineToggleButton
@@ -501,6 +560,30 @@ const styles = StyleSheet.create({
     reasonText: { fontSize: 16, fontWeight: '600' },
     closeBtn: { padding: 16, borderRadius: 16, backgroundColor: '#F2F2F7', alignItems: 'center' },
     closeBtnText: { fontSize: 16, fontWeight: '700' },
+    homeWarningCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF2F2',
+        padding: 12,
+        borderRadius: 12,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#FFDEDE',
+    },
+    warningTextContainer: {
+        flex: 1,
+        marginLeft: 11,
+    },
+    homeWarningTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#FF3B30',
+    },
+    homeWarningSub: {
+        fontSize: 12,
+        color: '#FF3B30',
+        opacity: 0.8,
+    },
 });
 
 export default HomeScreen;
