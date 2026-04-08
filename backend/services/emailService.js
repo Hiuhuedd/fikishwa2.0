@@ -11,6 +11,7 @@ class EmailService {
             host,
             port,
             secure: port === 465, // true for 465 (SSL), false for 587 (STARTTLS)
+            family: 4, // Force IPv4 to avoid ENETUNREACH issues on some networks
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS,
