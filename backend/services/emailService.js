@@ -1,37 +1,15 @@
-const nodemailer = require('nodemailer');
-const dns = require('dns');
-
-// Force Node.js to prioritize IPv4 over IPv6
-if (dns.setDefaultResultOrder) {
-    dns.setDefaultResultOrder('ipv4first');
-}
+const { Resend } = require('resend');
 
 class EmailService {
     constructor() {
-        const port = parseInt(process.env.SMTP_PORT) || 587;
-        const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+        const apiKey = process.env.RESEND_API_KEY;
 
-        console.log(`📧 Initializing Email Service with host: ${host}, port: ${port}`);
+        if (!apiKey) {
+            console.warn('⚠️ RESEND_API_KEY is not set. Email delivery will fail.');
+        }
 
-        this.transporter = nodemailer.createTransport({
-            host,
-            port,
-            secure: port === 465, // false for 587 (STARTTLS)
-            family: 4, // Force IPv4 to avoid ENETUNREACH issues on some networks
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-            tls: {
-                // Do not fail on invalid certificates (useful for some SMTP providers)
-                rejectUnauthorized: false
-            },
-            connectionTimeout: 10000, // 10 seconds
-            greetingTimeout: 10000,   // 10 seconds
-            socketTimeout: 20000      // 20 seconds
-        });
-
-        console.log('📧 Email Service Initialized (SMTP)');
+        this.resend = new Resend(apiKey);
+        console.log('📧 Email Service Initialized (Resend API)');
     }
 
     /**
@@ -39,19 +17,27 @@ class EmailService {
      */
     async sendEmail(to, subject, html, text = '') {
         try {
-            const mailOptions = {
-                from: process.env.SMTP_FROM || `"Fikishwa App" <${process.env.SMTP_USER}>`,
-                to,
-                subject,
-                text: text || html.replace(/<[^>]*>?/gm, ''), // Basic HTML to text fallback
-                html
-            };
+            console.log(`📧 Attempting Resend delivery to ${to}...`);
 
-            const info = await this.transporter.sendMail(mailOptions);
-            console.log(`✅ Email sent to ${to}: ${info.messageId}`);
-            return info;
+            const from = process.env.SMTP_FROM || 'onboarding@resend.dev';
+
+            const { data, error } = await this.resend.emails.send({
+                from: `Fikishwa App <${from}>`,
+                to: [to],
+                subject,
+                html,
+                text: text || html.replace(/<[^>]*>?/gm, ''), // Basic HTML to text fallback
+            });
+
+            if (error) {
+                console.error(`❌ Resend API Error for ${to}:`, error);
+                throw error;
+            }
+
+            console.log(`✅ Email sent to ${to}: ${data?.id}`);
+            return data;
         } catch (error) {
-            console.error(`❌ Failed to send email to ${to}:`, error.message);
+            console.error(`❌ Failed to send email via Resend to ${to}:`, error.message);
             throw error;
         }
     }
@@ -63,7 +49,7 @@ class EmailService {
         const subject = `${otp} is your Fikishwa verification code`;
         const html = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #4CAF50; text-align: center;">Fikishwa Verification</h2>
+                <h2 style="color: #D4AF37; text-align: center;">Fikishwa Verification</h2>
                 <p>Hello,</p>
                 <p>Use the following code to verify your Fikishwa account. This code is valid for 5 minutes.</p>
                 <div style="background: #f9f9f9; padding: 20px; text-align: center; border-radius: 5px; margin: 20px 0;">
