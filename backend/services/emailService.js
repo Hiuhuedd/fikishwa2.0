@@ -1,4 +1,10 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+
+// Force Node.js to prioritize IPv4 over IPv6
+if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
+}
 
 class EmailService {
     constructor() {
@@ -10,7 +16,7 @@ class EmailService {
         this.transporter = nodemailer.createTransport({
             host,
             port,
-            secure: port === 465, // true for 465 (SSL), false for 587 (STARTTLS)
+            secure: port === 465, // false for 587 (STARTTLS)
             family: 4, // Force IPv4 to avoid ENETUNREACH issues on some networks
             auth: {
                 user: process.env.SMTP_USER,
