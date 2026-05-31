@@ -27,7 +27,7 @@ export default function PromotionsPage() {
 
   const fetch = useCallback(async () => {
     setLoading(true); setError('');
-    try { const { data } = await api.get('/admin/promotions'); setPromos(data.promotions || data || []); }
+    try { const { data } = await api.get('/admin/promotions/all'); setPromos(data.promotions || data || []); }
     catch { setError('Failed to load promotions.'); }
     finally { setLoading(false); }
   }, []);
@@ -45,8 +45,7 @@ export default function PromotionsPage() {
     setSaving(true);
     const payload = { code: form.code.toUpperCase(), discountType: form.discountType, discountValue: +form.discountValue, minOrderValue: form.minOrderValue ? +form.minOrderValue : undefined, maxUses: form.maxUses ? +form.maxUses : undefined, expiryDate: form.expiryDate || undefined };
     try {
-      if (editId) await api.put(`/admin/promotions/${editId}`, payload);
-      else await api.post('/admin/promotions', payload);
+      await api.post('/admin/promotions/create', payload);
       showToast('success', `Promotion ${editId ? 'updated' : 'created'}`); setModal(false); fetch();
     } catch { showToast('error', 'Failed to save promotion'); }
     finally { setSaving(false); }
@@ -94,7 +93,7 @@ export default function PromotionsPage() {
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <button onClick={() => openModal(p)} className="p-2 border border-border rounded-lg hover:bg-slate-50 transition-colors"><Edit2 className="w-4 h-4 text-textSecondary" /></button>
-                    <button onClick={() => setDeleteId(p.promoId)} className="p-2 border border-error/30 rounded-lg hover:bg-error/5 transition-colors"><Trash2 className="w-4 h-4 text-error" /></button>
+                    <button onClick={() => setDeleteId(p.code)} className="p-2 border border-error/30 rounded-lg hover:bg-error/5 transition-colors"><Trash2 className="w-4 h-4 text-error" /></button>
                   </div>
                 </div>
               ))}

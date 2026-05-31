@@ -5,6 +5,9 @@ import { MainNavigator } from './MainNavigator';
 import { OnboardingNavigator } from './OnboardingNavigator';
 import { useAuthStore } from '../store/useAuthStore';
 import { View, ActivityIndicator } from 'react-native';
+import { registerForPushNotificationsAsync } from '../services/pushNotifications';
+import api from '../services/api';
+import * as Notifications from 'expo-notifications';
 
 export const RootNavigator = () => {
     const { user, isLoading, initialize } = useAuthStore();
@@ -12,6 +15,34 @@ export const RootNavigator = () => {
     useEffect(() => {
         initialize();
     }, []);
+
+    const isApproved = user?.registrationStatus === 'approved';
+
+    useEffect(() => {
+        if (user && isApproved) {
+            registerForPushNotificationsAsync().then(token => {
+                if (token) {
+                    console.log('Sending push token to backend...');
+                    api.post('/driver/auth/push-token', { pushToken: token }).catch(err => {
+                        console.error('Failed to save push token to backend', err);
+                    });
+                }
+            });
+
+            const subscription = Notifications.addNotificationReceivedListener(notification => {
+                console.log('Push notification received:', notification);
+            });
+
+            const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
+                console.log('Push notification interacted:', response);
+            });
+
+            return () => {
+                subscription.remove();
+                responseSubscription.remove();
+            };
+        }
+    }, [user, isApproved]);
 
     if (isLoading) {
         return (
@@ -30,7 +61,6 @@ export const RootNavigator = () => {
     }
 
     // Determine if driver is fully approved
-    const isApproved = user.registrationStatus === 'approved';
 
     return (
         <NavigationContainer>

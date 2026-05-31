@@ -3,10 +3,10 @@ export interface VehicleCategory {
   name: string;
   baseFare: number;
   perKmRate: number;
-  perMinuteRate: number;
-  minimumFare: number;
+  perMinRate: number;
+  minFare: number;
   maxPassengers: number;
-  isActive: boolean;
+  active: boolean;
   image?: string;
   description?: string;
 }

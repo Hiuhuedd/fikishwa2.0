@@ -17,7 +17,7 @@ export default function CustomersPage() {
   const fetch = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const { data } = await api.get('/admin/customers');
+      const { data } = await api.get('/admin/customers/all');
       setCustomers(data.customers || data || []);
     } catch { setError('Failed to load customers.'); }
     finally { setLoading(false); }

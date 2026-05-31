@@ -10,6 +10,7 @@ const socketService = require('./socketService');
 const ngeohash = require('ngeohash');
 const configService = require('./configService');
 const vehicleCategoryService = require('./vehicleCategoryService');
+const pushNotificationService = require('./pushNotificationService');
 
 const db = getFirestoreApp();
 
@@ -125,6 +126,18 @@ const requestRide = async (customerData) => {
             routePolyline: routeData.geometry || '',
             customerName: customerData.customerName || 'Customer'
         });
+
+        const fareFormatted = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(estimate.estimatedFare);
+        for (const driver of nearbyDrivers) {
+            if (driver.pushToken) {
+                pushNotificationService.sendPushNotification(
+                    driver.pushToken,
+                    'New Ride Request!',
+                    `Pick up ${customerData.customerName || 'Customer'} - ${fareFormatted}`,
+                    { rideId, type: 'new-ride-request' }
+                );
+            }
+        }
 
         // 6. Set auto-cancel timeout (90 seconds)
         setTimeout(async () => {

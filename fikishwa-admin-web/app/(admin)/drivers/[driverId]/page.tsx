@@ -81,7 +81,7 @@ export default function DriverDetailPage() {
   const doToggle = async () => {
     setActionLoading(true);
     try {
-      await api.post(`/admin/drivers/${driverId}/toggle`, { isEnabled: driver?.isEnabled === false });
+      await api.post(`/admin/auth/toggle-driver-status`, { uid: driver?.uid, isEnabled: driver?.isEnabled === false });
       showToast('success', `Driver ${driver?.isEnabled === false ? 'enabled' : 'disabled'}`);
       setConfirmToggle(false); fetchDriver();
     } catch { showToast('error', 'Failed to toggle driver'); }
@@ -92,7 +92,7 @@ export default function DriverDetailPage() {
     if (!selectedCategory) return;
     setActionLoading(true);
     try {
-      await api.post(`/admin/drivers/${driverId}/category`, { categoryId: selectedCategory });
+      await api.post(`/admin/drivers/${driverId}/update-category`, { categoryId: selectedCategory });
       showToast('success', 'Category updated'); setCategoryModal(false); fetchDriver();
     } catch { showToast('error', 'Failed to update category'); }
     finally { setActionLoading(false); }
@@ -102,7 +102,7 @@ export default function DriverDetailPage() {
     if (!phoneVal.trim()) return;
     setActionLoading(true);
     try {
-      await api.post(`/admin/drivers/${driverId}/phone`, { phone: phoneVal });
+      await api.post(`/admin/drivers/${driverId}/update-phone`, { phone: phoneVal });
       showToast('success', 'Phone updated'); setPhoneModal(false); fetchDriver();
     } catch { showToast('error', 'Failed to update phone'); }
     finally { setActionLoading(false); }

@@ -30,7 +30,7 @@ export default function DriversPage() {
   const fetch = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const url = tab === 'pending' ? '/admin/drivers/pending' : '/admin/drivers?status=all';
+      const url = tab === 'pending' ? '/admin/drivers/pending' : '/admin/drivers/all';
       const { data } = await api.get(url);
       setDrivers(data.drivers || []);
     } catch { setError('Failed to load drivers.'); }

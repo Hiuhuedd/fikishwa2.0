@@ -127,11 +127,33 @@ const acceptPolicies = async (req, res) => {
     }
 };
 
+const updatePushToken = async (req, res) => {
+    try {
+        const uid = req.user.uid;
+        const { pushToken } = req.body;
+        
+        if (!pushToken) {
+            return res.status(400).json({ success: false, message: 'pushToken is required' });
+        }
+
+        await driverAuthService.updatePushToken(uid, pushToken);
+
+        res.status(200).json({
+            success: true,
+            message: 'Push token updated successfully'
+        });
+    } catch (error) {
+        console.error('Driver Update Push Token Error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
 module.exports = {
     sendOtp,
     verifyOtp,
     updateProfile,
     submitRegistration,
     getProfile,
-    acceptPolicies
+    acceptPolicies,
+    updatePushToken
 };

@@ -10,7 +10,7 @@ import { useToast } from '@/components/ui/Toast';
 import type { VehicleCategory } from '@/types/category';
 import { Plus, Edit2, ToggleLeft, ToggleRight } from 'lucide-react';
 
-const EMPTY_FORM = { name: '', baseFare: '', perKmRate: '', perMinuteRate: '', minimumFare: '', maxPassengers: '4', image: '' };
+const EMPTY_FORM = { name: '', baseFare: '', perKmRate: '', perMinRate: '', minFare: '', maxPassengers: '4', image: '' };
 
 export default function CategoriesPage() {
   const { showToast } = useToast();
@@ -35,23 +35,23 @@ export default function CategoriesPage() {
 
   const openModal = (cat?: VehicleCategory) => {
     setEditId(cat?.categoryId || null);
-    setForm(cat ? { name: cat.name, baseFare: String(cat.baseFare), perKmRate: String(cat.perKmRate), perMinuteRate: String(cat.perMinuteRate), minimumFare: String(cat.minimumFare), maxPassengers: String(cat.maxPassengers), image: cat.image || '' } : EMPTY_FORM);
+    setForm(cat ? { name: cat.name, baseFare: String(cat.baseFare), perKmRate: String(cat.perKmRate), perMinRate: String(cat.perMinRate), minFare: String(cat.minFare), maxPassengers: String(cat.maxPassengers), image: cat.image || '' } : EMPTY_FORM);
     setModal(true);
   };
 
   const doToggle = async (cat: VehicleCategory) => {
-    setCategories(p => p.map(c => c.categoryId === cat.categoryId ? { ...c, isActive: !c.isActive } : c));
-    try { await api.post(`/admin/vehicle-categories/${cat.categoryId}/toggle`, { isActive: !cat.isActive }); }
-    catch { setCategories(p => p.map(c => c.categoryId === cat.categoryId ? { ...c, isActive: cat.isActive } : c)); showToast('error', 'Failed to update status'); }
+    setCategories(p => p.map(c => c.categoryId === cat.categoryId ? { ...c, active: !c.active } : c));
+    try { await api.post(`/admin/vehicle-categories/${cat.categoryId}/toggle`, { active: !cat.active }); }
+    catch { setCategories(p => p.map(c => c.categoryId === cat.categoryId ? { ...c, active: cat.active } : c)); showToast('error', 'Failed to update status'); }
   };
 
   const doSave = async () => {
-    if (!form.name || !form.baseFare || !form.perKmRate || !form.minimumFare) return showToast('error', 'Please fill all required fields');
+    if (!form.name || !form.baseFare || !form.perKmRate || !form.minFare) return showToast('error', 'Please fill all required fields');
     setSaving(true);
-    const payload = { name: form.name, baseFare: +form.baseFare, perKmRate: +form.perKmRate, perMinuteRate: +form.perMinuteRate || 0, minimumFare: +form.minimumFare, maxPassengers: +form.maxPassengers || 4, image: form.image };
+    const payload = { name: form.name, baseFare: +form.baseFare, perKmRate: +form.perKmRate, perMinRate: +form.perMinRate || 0, minFare: +form.minFare, maxPassengers: +form.maxPassengers || 4, image: form.image };
     try {
-      if (editId) await api.put(`/admin/vehicle-categories/${editId}`, payload);
-      else await api.post('/admin/vehicle-categories', { ...payload, categoryId: form.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''), isActive: true });
+      if (editId) await api.post(`/admin/vehicle-categories/${editId}/update`, payload);
+      else await api.post('/admin/vehicle-categories/create', { ...payload, categoryId: form.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''), active: true });
       showToast('success', `Category ${editId ? 'updated' : 'created'}`);
       setModal(false); fetch();
     } catch { showToast('error', 'Failed to save category'); }
@@ -84,7 +84,7 @@ export default function CategoriesPage() {
                       <p className="text-xs text-textMuted">Max {cat.maxPassengers} passengers</p>
                     </div>
                     <button onClick={() => doToggle(cat)} className="transition-colors">
-                      {cat.isActive
+                      {cat.active
                         ? <ToggleRight className="w-8 h-8 text-success" />
                         : <ToggleLeft className="w-8 h-8 text-textMuted" />}
                     </button>
@@ -92,9 +92,9 @@ export default function CategoriesPage() {
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     {[
                       { label: 'Base Fare', val: formatCurrency(cat.baseFare) },
-                      { label: 'Min Fare', val: formatCurrency(cat.minimumFare) },
+                      { label: 'Min Fare', val: formatCurrency(cat.minFare) },
                       { label: 'Per KM', val: formatCurrency(cat.perKmRate) },
-                      { label: 'Per Min', val: formatCurrency(cat.perMinuteRate) },
+                      { label: 'Per Min', val: formatCurrency(cat.perMinRate) },
                     ].map(({ label, val }) => (
                       <div key={label} className="bg-slate-50 rounded-xl p-3">
                         <p className="text-xs text-textMuted">{label}</p>
@@ -118,7 +118,7 @@ export default function CategoriesPage() {
 
           <p className="text-xs font-bold uppercase tracking-wider text-primary pt-1">Pricing (KES)</p>
           <div className="grid grid-cols-2 gap-3">
-            {[['baseFare', 'Base Fare *'], ['minimumFare', 'Min Fare *'], ['perKmRate', 'Per KM *'], ['perMinuteRate', 'Per Min']].map(([key, label]) => (
+            {[['baseFare', 'Base Fare *'], ['minFare', 'Min Fare *'], ['perKmRate', 'Per KM *'], ['perMinRate', 'Per Min']].map(([key, label]) => (
               <div key={key}><label className="block text-xs font-semibold text-textSecondary mb-1">{label}</label>
                 <input type="number" value={form[key as keyof typeof EMPTY_FORM]} onChange={e => f(key as keyof typeof EMPTY_FORM, e.target.value)} className="w-full px-3 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="0" /></div>
             ))}

@@ -26,7 +26,7 @@ const getDistance = (lat1, lon1, lat2, lon2) => {
  * @param {object} pickup - { lat, lng }
  * @param {number} radiusKm - search radius
  */
-const findNearbyDrivers = async (pickup, radiusKm = 10, requestedCategory = null) => {
+const findNearbyDrivers = async (pickup, radiusKm = 10, requestedCategory = null, includeOffline = false) => {
     try {
         const config = await configService.getConfig();
         const maxDispatchRadius = config.maxDispatchRadius || null;
@@ -83,19 +83,20 @@ const findNearbyDrivers = async (pickup, radiusKm = 10, requestedCategory = null
             const driverCategory = (data.currentCategory || 'fikaa').toString().trim();
             const requestedCatTrimmed = (requestedCategory || '').toString().trim();
             const matchesCategory = !requestedCategory || driverCategory === requestedCatTrimmed;
+            const notificationsEnabled = data.receiveOfflineNotifications !== false;
 
-            if (isOnline && isNotBusy && matchesCategory) {
+            if ((isOnline || (includeOffline && notificationsEnabled)) && isNotBusy && matchesCategory) {
                 if (maxDispatchRadius && maxDispatchRadius > 0 && data.currentLocation) {
                     const distance = getDistance(pickup.lat, pickup.lng, data.currentLocation.lat, data.currentLocation.lng);
                     if (distance <= maxDispatchRadius) {
                         drivers.push({ id, ...data, distance });
-                        console.log(`   - Driver ${id}: MATCH (dist: ${distance.toFixed(2)}km <= ${maxDispatchRadius}km, cat=${driverCategory})`);
+                        console.log(`   - Driver ${id}: MATCH (dist: ${distance.toFixed(2)}km <= ${maxDispatchRadius}km, cat=${driverCategory}, online=${isOnline})`);
                     } else {
                         console.log(`   - Driver ${id}: SKIP (dist: ${distance.toFixed(2)}km > ${maxDispatchRadius}km)`);
                     }
                 } else {
                     drivers.push({ id, ...data });
-                    console.log(`   - Driver ${id}: MATCH (cat=${driverCategory}, dist: N/A)`);
+                    console.log(`   - Driver ${id}: MATCH (cat=${driverCategory}, online=${isOnline}, dist: N/A)`);
                 }
             }
         });

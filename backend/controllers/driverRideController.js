@@ -54,6 +54,7 @@ exports.goOnline = async (req, res) => {
             busy: false,
             currentLocation: location,
             currentCategory: category, // Save current vehicle category
+            pushToken: data.pushToken || null, // Save push token for notifications
             geohash,
             lastSeenAt: serverTimestamp()
         });

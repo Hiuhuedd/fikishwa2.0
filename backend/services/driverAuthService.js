@@ -287,6 +287,26 @@ class DriverAuthService {
         const updatedDoc = await getDoc(driverDocRef);
         return updatedDoc.data();
     }
+
+    async updatePushToken(uid, pushToken) {
+        const driverDocRef = doc(this.db, 'drivers', uid);
+        await updateDoc(driverDocRef, {
+            pushToken: pushToken,
+            updatedAt: Timestamp.now()
+        });
+
+        const activeDriverRef = doc(this.db, 'activeDrivers', uid);
+        try {
+            const activeDoc = await getDoc(activeDriverRef);
+            if (activeDoc.exists()) {
+                await updateDoc(activeDriverRef, { pushToken });
+            }
+        } catch (e) {
+            console.error('Failed to update push token in activeDrivers:', e);
+        }
+
+        return true;
+    }
 }
 
 module.exports = new DriverAuthService();

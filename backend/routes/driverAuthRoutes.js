@@ -19,5 +19,6 @@ router.post('/update-profile', authMiddleware, driverAuthController.updateProfil
 router.post('/submit-registration', authMiddleware, driverAuthController.submitRegistration);
 router.get('/profile', authMiddleware, driverAuthController.getProfile);
 router.post('/accept-policies', authMiddleware, driverAuthController.acceptPolicies);
+router.post('/push-token', authMiddleware, driverAuthController.updatePushToken);
 
 module.exports = router;
