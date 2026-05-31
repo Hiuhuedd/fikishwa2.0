@@ -1,8 +1,9 @@
 import React, { forwardRef } from 'react';
-import { View, Image as RNImage, StyleSheet } from 'react-native';
+import { View, Image as RNImage, StyleSheet, useColorScheme } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { decodePolyline } from '../utils/mapUtils';
+import { darkMapStyle, lightMapStyle } from '../theme/mapStyles';
 
 const carMarkerImg = require('../assets/images/car_marker.png');
 
@@ -15,6 +16,7 @@ interface RideMapProps {
 }
 
 const RideMap = forwardRef<MapView, RideMapProps>(({ location, activeRide, currentRequest, initialRegion, googleMapsApiKey }, ref) => {
+    const isDarkTheme = useColorScheme() === 'dark';
 
     return (
         <MapView
@@ -22,6 +24,7 @@ const RideMap = forwardRef<MapView, RideMapProps>(({ location, activeRide, curre
             provider={PROVIDER_GOOGLE}
             style={styles.map}
             initialRegion={initialRegion}
+            customMapStyle={isDarkTheme ? darkMapStyle : lightMapStyle}
         >
             {location && (
                 <Marker

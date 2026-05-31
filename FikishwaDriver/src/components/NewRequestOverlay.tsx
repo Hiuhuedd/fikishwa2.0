@@ -10,7 +10,8 @@ interface RideRequest {
     distanceKm: number;
     durationMin: number;
     customerName: string;
-    vehicleCategory: string;
+    vehicleCategory?: string;
+    rideType?: string;
 }
 
 interface Props {
@@ -51,13 +52,15 @@ const NewRequestOverlay = ({ request, onAccept, onReject }: Props) => {
     if (!request) return null;
 
     return (
-        <View style={styles.container} pointerEvents="box-none">
+        <View style={styles.container} pointerEvents="auto">
             <View style={styles.executiveCard}>
                 {/* Header Sequence */}
                 <View style={styles.header}>
                     <View style={styles.badgeExecutive}>
                         <View style={styles.pulseDot} />
-                        <Text style={styles.badgeText}>{request.vehicleCategory.toUpperCase()} REQUEST</Text>
+                        <Text style={styles.badgeText}>
+                            {(request.vehicleCategory || request.rideType || 'STANDARD').toUpperCase()} REQUEST
+                        </Text>
                     </View>
                     <TouchableOpacity style={styles.rejectBtn} onPress={onReject} disabled={isAccepting}>
                         <X size={18} color="#111" />
@@ -130,13 +133,11 @@ const NewRequestOverlay = ({ request, onAccept, onReject }: Props) => {
 
 const styles = StyleSheet.create({
     container: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'transparent',
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)', // Full screen dark overlay
+        justifyContent: 'flex-start',
         padding: 16,
-        paddingTop: 48,
+        paddingTop: 60,
         zIndex: 9999,
     },
     executiveCard: {
