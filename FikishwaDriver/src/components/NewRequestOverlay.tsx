@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions, ActivityIndicator } from 'react-native';
-import { MapPin, Navigation, Clock, CreditCard, X, Check } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { MapPin, Navigation, Clock, CreditCard, X, ChevronRight } from 'lucide-react-native';
 
 interface RideRequest {
     rideId: string;
@@ -27,8 +27,6 @@ const getHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: nu
         Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    // Road distance is typically ~25-30% longer than straight line
     const straightLine = R * c;
     return parseFloat((straightLine * 1.3).toFixed(2));
 };
@@ -36,18 +34,16 @@ const getHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: nu
 const NewRequestOverlay = ({ request, onAccept, onReject }: Props) => {
     const [isAccepting, setIsAccepting] = useState(false);
 
-    // Derived metrics for display - prioritize backend distance if it's non-zero
     const hasBackendMetric = request?.distanceKm && request.distanceKm > 0;
     const distanceVal = hasBackendMetric
         ? request.distanceKm
         : (request ? getHaversineDistance(request.pickup.lat, request.pickup.lng, request.dropoff.lat, request.dropoff.lng) : 0);
 
     const displayDistance = Number(distanceVal).toFixed(2);
-    const displayTime = request?.durationMin || Math.ceil(Number(distanceVal) * 2.5); // Estimate 2.5 min per km
+    const displayTime = request?.durationMin || Math.ceil(Number(distanceVal) * 2.5);
 
     useEffect(() => {
         if (request) {
-            console.log('📬 [Driver/NewRequest] Request Data:', JSON.stringify(request, null, 2));
             setIsAccepting(false);
         }
     }, [request]);
@@ -56,76 +52,81 @@ const NewRequestOverlay = ({ request, onAccept, onReject }: Props) => {
 
     return (
         <View style={styles.container} pointerEvents="box-none">
-            <View style={styles.card}>
-                {/* Header with Category and Close */}
+            <View style={styles.executiveCard}>
+                {/* Header Sequence */}
                 <View style={styles.header}>
-                    <View style={styles.categoryBadge}>
-                        <Text style={styles.categoryText}>{request.vehicleCategory.toUpperCase()}</Text>
+                    <View style={styles.badgeExecutive}>
+                        <View style={styles.pulseDot} />
+                        <Text style={styles.badgeText}>{request.vehicleCategory.toUpperCase()} REQUEST</Text>
                     </View>
-                    <TouchableOpacity style={styles.closeIcon} onPress={onReject} disabled={isAccepting}>
-                        <X size={20} color="#666" />
+                    <TouchableOpacity style={styles.rejectBtn} onPress={onReject} disabled={isAccepting}>
+                        <X size={18} color="#111" />
                     </TouchableOpacity>
                 </View>
 
-                {/* Customer Info */}
+                {/* Rider Name */}
                 <Text style={styles.customerName}>{request.customerName}</Text>
 
-                {/* Routes - Compact */}
+                {/* Routes Sequence */}
                 <View style={styles.routeContainer}>
-                    <View style={styles.routeLine}>
-                        <View style={[styles.dot, { backgroundColor: '#4CD964' }]} />
-                        <View style={styles.line} />
-                        <View style={[styles.dot, { backgroundColor: '#FF3B30' }]} />
+                    <View style={styles.routeTimeline}>
+                        <View style={[styles.timelineDot, { backgroundColor: '#111' }]} />
+                        <View style={styles.timelineLine} />
+                        <View style={[styles.timelineDot, { backgroundColor: '#0A84FF', borderRadius: 2 }]} />
                     </View>
                     <View style={styles.addressContainer}>
                         <Text style={styles.addressText} numberOfLines={1}>
-                            {request.pickup.address || 'Pickup'}
+                            {request.pickup.address || 'Pickup Location'}
                         </Text>
-                        <Text style={[styles.addressText, { marginTop: 12 }]} numberOfLines={1}>
-                            {request.dropoff.address || 'Dropoff'}
+                        <Text style={[styles.addressText, { marginTop: 16 }]} numberOfLines={1}>
+                            {request.dropoff.address || 'Dropoff Location'}
                         </Text>
                     </View>
                 </View>
 
-                {/* Metrics Row - Compact */}
-                <View style={styles.infoRow}>
-                    <View style={styles.infoItem}>
-                        <CreditCard size={18} color="#007AFF" />
-                        <Text style={styles.infoValue}>KES {request.fare}</Text>
+                {/* Metrics Box */}
+                <View style={styles.metricsGrid}>
+                    <View style={styles.metricItem}>
+                        <Text style={styles.metricLabel}>FARE</Text>
+                        <Text style={styles.metricValue}>KES {Number(request.fare).toLocaleString('en-US')}</Text>
                     </View>
-                    <View style={styles.infoItem}>
-                        <Navigation size={18} color="#007AFF" />
-                        <Text style={styles.infoValue}>{displayDistance} km</Text>
+                    <View style={styles.metricDivider} />
+                    <View style={styles.metricItem}>
+                        <Text style={styles.metricLabel}>DISTANCE</Text>
+                        <Text style={styles.metricValue}>{displayDistance} km</Text>
                     </View>
-                    <View style={styles.infoItem}>
-                        <Clock size={18} color="#007AFF" />
-                        <Text style={styles.infoValue}>{displayTime} min</Text>
+                    <View style={styles.metricDivider} />
+                    <View style={styles.metricItem}>
+                        <Text style={styles.metricLabel}>EST. TIME</Text>
+                        <Text style={styles.metricValue}>{displayTime} min</Text>
                     </View>
                 </View>
 
-                {/* Action Button - Prominent */}
+                {/* Executive Accept Button */}
                 <TouchableOpacity
-                    style={[styles.acceptBtn, isAccepting && { opacity: 0.8 }]}
+                    style={[styles.acceptBtn, isAccepting && styles.acceptBtnDisabled]}
                     onPress={() => {
                         setIsAccepting(true);
                         onAccept(request.rideId);
                     }}
                     disabled={isAccepting}
+                    activeOpacity={0.8}
                 >
                     {isAccepting ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <>
-                            <Check size={22} color="#fff" />
+                        <View style={styles.btnContent}>
                             <Text style={styles.acceptText}>ACCEPT RIDE</Text>
-                        </>
+                            <View style={styles.btnArrow}>
+                                <ChevronRight size={18} color="#111" />
+                            </View>
+                        </View>
                     )}
                 </TouchableOpacity>
             </View>
         </View>
     );
 };
-
 
 const styles = StyleSheet.create({
     container: {
@@ -134,108 +135,156 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         backgroundColor: 'transparent',
-        padding: 12,
-        paddingTop: 40,
+        padding: 16,
+        paddingTop: 48,
         zIndex: 9999,
     },
-    card: {
+    executiveCard: {
         backgroundColor: '#fff',
-        borderRadius: 20,
-        padding: 16,
+        borderRadius: 24,
+        padding: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.2,
-        shadowRadius: 12,
-        elevation: 12,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.15,
+        shadowRadius: 24,
+        elevation: 16,
+        borderWidth: 1,
+        borderColor: '#E5E5EA',
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: 16,
     },
-    categoryBadge: {
-        backgroundColor: '#E6F0FF',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 8,
+    badgeExecutive: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F2F2F7',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
     },
-    categoryText: {
-        color: '#007AFF',
-        fontSize: 11,
+    pulseDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#34C759',
+        marginRight: 6,
+    },
+    badgeText: {
+        color: '#111',
+        fontSize: 10,
         fontWeight: '800',
+        letterSpacing: 1,
     },
-    closeIcon: {
-        padding: 4,
+    rejectBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#F2F2F7',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     customerName: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: '#1A1A1A',
-        marginBottom: 12,
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#111',
+        letterSpacing: -0.5,
+        marginBottom: 20,
     },
     routeContainer: {
         flexDirection: 'row',
-        marginBottom: 16,
-        paddingHorizontal: 4,
+        marginBottom: 24,
     },
-    routeLine: {
+    routeTimeline: {
         alignItems: 'center',
         width: 16,
-        marginRight: 10,
+        marginRight: 12,
         paddingTop: 4,
     },
-    dot: {
+    timelineDot: {
         width: 8,
         height: 8,
         borderRadius: 4,
     },
-    line: {
+    timelineLine: {
         width: 1.5,
-        height: 18,
-        backgroundColor: '#EBEBEB',
-        marginVertical: 2,
+        height: 24,
+        backgroundColor: '#E5E5EA',
+        marginVertical: 4,
     },
     addressContainer: {
         flex: 1,
     },
     addressText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#444',
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#111',
+        lineHeight: 20,
     },
-    infoRow: {
+    metricsGrid: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
         backgroundColor: '#F8F9FA',
-        borderRadius: 12,
-        padding: 12,
-        marginBottom: 16,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: '#E5E5EA',
     },
-    infoItem: {
-        flexDirection: 'row',
+    metricItem: {
+        flex: 1,
         alignItems: 'center',
-        gap: 6,
     },
-    infoValue: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#1A1A1A',
+    metricDivider: {
+        width: 1,
+        height: 32,
+        backgroundColor: '#E5E5EA',
+    },
+    metricLabel: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: '#8E8E93',
+        letterSpacing: 1,
+        marginBottom: 4,
+    },
+    metricValue: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: '#111',
     },
     acceptBtn: {
-        height: 50,
-        borderRadius: 12,
-        flexDirection: 'row',
+        backgroundColor: '#111',
+        height: 60,
+        borderRadius: 16,
         justifyContent: 'center',
+        paddingHorizontal: 8,
+    },
+    acceptBtnDisabled: {
+        opacity: 0.7,
         alignItems: 'center',
-        backgroundColor: '#007AFF',
-        gap: 8,
+    },
+    btnContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingLeft: 16,
     },
     acceptText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: '800',
-        letterSpacing: 0.5,
+        letterSpacing: 1,
+    },
+    btnArrow: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });
 

@@ -680,16 +680,17 @@ const MatchingScreen = () => {
                         </View>
                     </View>
 
-                    {/* Payment Breakdown Line */}
+                                        {/* Estimated Fare Line */}
                     <View style={[styles.paymentRow, { borderTopColor: colors.border }]}>
                         <View style={styles.paymentLeft}>
                             <Wallet size={20} color={colors.textSecondary} />
-                            <Text style={[styles.paymentMethodLabel, { color: colors.textPrimary }]}>Payment Method:</Text>
+                            <Text style={[styles.paymentMethodLabel, { color: colors.textPrimary }]}>Estimated Fare:</Text>
                         </View>
-                        <TouchableOpacity style={styles.paymentRight}>
-                            <Text style={[styles.paymentMethodValue, { color: colors.textSecondary }]}>{paymentMethod === 'cash' ? 'Cash' : 'M-Pesa'}</Text>
-                            <ChevronRight size={16} color={colors.textSecondary} />
-                        </TouchableOpacity>
+                        <View style={styles.paymentRight}>
+                            <Text style={[styles.paymentMethodValue, { color: colors.textPrimary, fontWeight: '700', fontSize: 18 }]}>
+                                KES {Number(estimatedFare || 0).toLocaleString('en-US')}
+                            </Text>
+                        </View>
                     </View>
 
                     {/* Cancel Button */}

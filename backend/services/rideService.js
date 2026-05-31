@@ -233,6 +233,11 @@ const updateRideStatus = async (rideId, status, extraData = {}) => {
             updatedAt: serverTimestamp()
         });
 
+        // Clean up pending requests if ride is cancelled
+        if (status === 'cancelled' || status === 'cancelled_no_drivers') {
+            await deleteDoc(doc(db, 'rideRequests', rideId)).catch(e => console.log('Cleanup rideRequest failed:', e.message));
+        }
+
         const rideDoc = await getDoc(rideRef);
         const rideData = rideDoc.data();
 

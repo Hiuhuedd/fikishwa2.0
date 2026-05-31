@@ -1,7 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
-import { Navigation, CheckCircle2, CreditCard, MapPin } from 'lucide-react-native';
+import { Navigation, CheckCircle2, CreditCard, MapPin, ChevronRight } from 'lucide-react-native';
 
 interface ActiveRidePhaseCardProps {
     status: string;
@@ -21,132 +19,118 @@ const ActiveRidePhaseCard = ({
     onConfirmPayment
 }: ActiveRidePhaseCardProps) => {
 
+    const renderAction = (
+        title: string, 
+        subtitle: string, 
+        Icon: any, 
+        onPress: () => void, 
+        color: string = '#111111'
+    ) => (
+        <View style={styles.premiumContainer}>
+            <View style={styles.statusHeader}>
+                <View style={[styles.pulseIndicator, { backgroundColor: color }]} />
+                <Text style={styles.statusSubtitle}>{subtitle}</Text>
+            </View>
+            <TouchableOpacity
+                style={[styles.executiveBtn, { backgroundColor: color }, isLoading && styles.disabledBtn]}
+                onPress={onPress}
+                disabled={isLoading}
+                activeOpacity={0.8}
+            >
+                {isLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                    <View style={styles.btnContent}>
+                        <View style={styles.btnLeft}>
+                            <Icon size={20} color="#fff" style={{ marginRight: 12 }} />
+                            <Text style={styles.executiveBtnText}>{title}</Text>
+                        </View>
+                        <View style={styles.btnArrow}>
+                            <ChevronRight size={20} color="#111" />
+                        </View>
+                    </View>
+                )}
+            </TouchableOpacity>
+        </View>
+    );
+
     if (status === 'accepted' || status === 'picking_up') {
-        return (
-            <View style={styles.phaseContainer}>
-                <TouchableOpacity
-                    style={[styles.bigActionBtnPrimary, isLoading && styles.disabledBtn]}
-                    onPress={onArrived}
-                    disabled={isLoading}
-                >
-                    {isLoading ? (
-                        <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                        <>
-                            <Navigation size={24} color="#fff" style={{ marginRight: 10 }} />
-                            <Text style={styles.bigActionBtnText}>I HAVE ARRIVED</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
-            </View>
-        );
+        return renderAction('I HAVE ARRIVED', 'NAVIGATING TO PICKUP', Navigation, onArrived, '#1A1A1A');
     }
-
     if (status === 'arrived') {
-        return (
-            <View style={styles.phaseContainer}>
-                <Text style={styles.phaseTitle}>PICKUP CUSTOMER</Text>
-                <TouchableOpacity
-                    style={[styles.bigActionBtnPrimary, { backgroundColor: colors.success }, isLoading && styles.disabledBtn]}
-                    onPress={onStartRide}
-                    disabled={isLoading}
-                >
-                    {isLoading ? (
-                        <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                        <>
-                            <CheckCircle2 size={24} color="#fff" style={{ marginRight: 10 }} />
-                            <Text style={styles.bigActionBtnText}>START RIDE</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
-            </View>
-        );
+        return renderAction('START RIDE', 'WAITING FOR CUSTOMER', CheckCircle2, onStartRide, '#0A84FF');
     }
-
     if (status === 'in_progress') {
-        return (
-            <View style={styles.phaseContainer}>
-                <Text style={styles.phaseTitle}>TRIP IN PROGRESS</Text>
-                <TouchableOpacity
-                    style={[styles.bigActionBtnPrimary, { backgroundColor: colors.error }, isLoading && styles.disabledBtn]}
-                    onPress={onCompleteRide}
-                    disabled={isLoading}
-                >
-                    {isLoading ? (
-                        <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                        <>
-                            <MapPin size={24} color="#fff" style={{ marginRight: 10 }} />
-                            <Text style={styles.bigActionBtnText}>COMPLETE TRIP</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
-            </View>
-        );
+        return renderAction('COMPLETE TRIP', 'TRIP IN PROGRESS', MapPin, onCompleteRide, '#000000');
     }
-
     if (status === 'completed') {
-        return (
-            <View style={styles.phaseContainer}>
-                <Text style={styles.phaseTitle}>TRIP SUMMARY</Text>
-                <TouchableOpacity
-                    style={[styles.bigActionBtnPrimary, { backgroundColor: colors.info }, isLoading && styles.disabledBtn]}
-                    onPress={onConfirmPayment}
-                    disabled={isLoading}
-                >
-                    {isLoading ? (
-                        <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                        <>
-                            <CreditCard size={24} color="#fff" style={{ marginRight: 10 }} />
-                            <Text style={styles.bigActionBtnText}>CONFIRM PAYMENT</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
-            </View>
-        );
+        return renderAction('CONFIRM PAYMENT', 'TRIP COMPLETED', CreditCard, onConfirmPayment, '#34C759');
     }
 
     return null;
 };
 
 const styles = StyleSheet.create({
-    phaseContainer: {
-        backgroundColor: colors.background,
-        padding: spacing.sm,
-        borderTopWidth: 1,
-        borderTopColor: colors.divider,
+    premiumContainer: {
+        paddingTop: 8,
+        paddingBottom: 16,
     },
-    phaseTitle: {
-        fontSize: 20,
-        fontWeight: '900',
-        textAlign: 'center',
-        marginBottom: spacing.md,
-        color: colors.textPrimary,
-        letterSpacing: 1
-    },
-    bigActionBtnPrimary: {
-        backgroundColor: colors.primary,
-        paddingVertical: spacing.lg,
-        borderRadius: spacing.borderRadius,
-        alignItems: 'center',
+    statusHeader: {
         flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
         justifyContent: 'center',
+    },
+    pulseIndicator: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        marginRight: 8,
+    },
+    statusSubtitle: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#8E8E93',
+        letterSpacing: 1.5,
+        textTransform: 'uppercase',
+    },
+    executiveBtn: {
+        borderRadius: 16,
+        height: 64,
+        justifyContent: 'center',
+        paddingHorizontal: 8,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 6
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    btnContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingLeft: 16,
+    },
+    btnLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    btnArrow: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: '#ffffff',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    executiveBtnText: {
+        color: '#ffffff',
+        fontSize: 16,
+        fontWeight: '800',
+        letterSpacing: 1,
     },
     disabledBtn: {
-        opacity: 0.7
-    },
-    bigActionBtnText: {
-        color: '#fff',
-        fontSize: 22,
-        fontWeight: '900',
-        letterSpacing: 0.5
+        opacity: 0.6,
     },
 });
 
