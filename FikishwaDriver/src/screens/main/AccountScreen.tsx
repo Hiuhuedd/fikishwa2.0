@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, TextInput, Image as RNImage, ActivityIndicator, Alert } from 'react-native';
-import { ChevronLeft, User, Phone, Mail, MapPin, ChevronRight, Camera, Check, X, FileText, ShieldCheck } from 'lucide-react-native';
+import { ChevronLeft, User, Phone, Mail, MapPin, ChevronRight, Camera, Check, X, FileText, ShieldCheck, Bell } from 'lucide-react-native';
+import { Switch } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/useAuthStore';
 import * as ImagePicker from 'expo-image-picker';
@@ -44,7 +45,8 @@ const AccountScreen = () => {
         name: user?.name || '',
         email: user?.email || '',
         phone: user?.phone || '',
-        profilePhotoUrl: user?.profilePhotoUrl || ''
+        profilePhotoUrl: user?.profilePhotoUrl || '',
+        receiveOfflineNotifications: user?.receiveOfflineNotifications ?? true
     });
 
     useEffect(() => {
@@ -53,7 +55,8 @@ const AccountScreen = () => {
                 name: user.name || '',
                 email: user.email || '',
                 phone: user.phone || '',
-                profilePhotoUrl: user.profilePhotoUrl || ''
+                profilePhotoUrl: user.profilePhotoUrl || '',
+                receiveOfflineNotifications: user.receiveOfflineNotifications ?? true
             });
         }
     }, [user]);
@@ -204,6 +207,33 @@ const AccountScreen = () => {
                         formData={formData}
                         setFormData={setFormData}
                     />
+                    {isEditing ? (
+                        <View style={styles.menuItem}>
+                            <View style={styles.menuItemLeft}>
+                                <View style={styles.iconContainer}>
+                                    <Bell size={20} color="#64748B" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.menuItemTitle}>Offline Notifications</Text>
+                                    <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>Receive alerts when offline</Text>
+                                </View>
+                            </View>
+                            <Switch
+                                value={formData.receiveOfflineNotifications}
+                                onValueChange={(val) => setFormData((prev: any) => ({ ...prev, receiveOfflineNotifications: val }))}
+                                trackColor={{ false: '#CBD5E1', true: '#22C55E' }}
+                                thumbColor="#fff"
+                            />
+                        </View>
+                    ) : (
+                        <MenuItem
+                            icon={Bell}
+                            title="Offline Notifications"
+                            value={formData.receiveOfflineNotifications ? 'Enabled' : 'Disabled'}
+                            showChevron={false}
+                            isEditing={false}
+                        />
+                    )}
                 </View>
 
                 {!isEditing && (

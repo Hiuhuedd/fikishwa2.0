@@ -104,7 +104,7 @@ const requestRide = async (customerData) => {
         await setDoc(doc(db, 'rideRequests', rideId), rideRequestData);
 
         // 5. Find nearby drivers (filtered by category) and notify
-        const nearbyDrivers = await matchingService.findNearbyDrivers(pickup, 10, vehicleCategory);
+        const nearbyDrivers = await matchingService.findNearbyDrivers(pickup, 10, vehicleCategory, true);
         const driverIds = nearbyDrivers.map(d => d.id);
 
         console.log(`📡 [RideService] Emitting 'new-ride-request' for ride ${rideId}. Estimate:`, JSON.stringify({

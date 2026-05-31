@@ -203,8 +203,24 @@ class DriverAuthService {
         // Agreements
         if (profileData.agreementsAccepted !== undefined) updatePayload.agreementsAccepted = profileData.agreementsAccepted;
 
+        // Notifications
+        if (profileData.receiveOfflineNotifications !== undefined) updatePayload.receiveOfflineNotifications = profileData.receiveOfflineNotifications;
+
         if (Object.keys(updatePayload).length > 0) {
             await updateDoc(driverDocRef, updatePayload);
+
+            // Sync with activeDrivers if relevant fields changed
+            if (profileData.receiveOfflineNotifications !== undefined) {
+                try {
+                    const activeDriverRef = doc(this.db, 'activeDrivers', uid);
+                    const activeDoc = await getDoc(activeDriverRef);
+                    if (activeDoc.exists()) {
+                        await updateDoc(activeDriverRef, { receiveOfflineNotifications: profileData.receiveOfflineNotifications });
+                    }
+                } catch (e) {
+                    console.error('Failed to sync offline notifications setting to activeDrivers:', e);
+                }
+            }
 
             const updatedDoc = await getDoc(driverDocRef);
             return updatedDoc.data();

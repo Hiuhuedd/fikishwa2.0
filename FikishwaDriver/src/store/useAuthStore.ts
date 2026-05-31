@@ -33,6 +33,7 @@ interface User {
     totalRides?: number;
     totalEarnings?: number;
     totalRatingsCount?: number;
+    receiveOfflineNotifications?: boolean;
 }
 
 interface AuthState {
