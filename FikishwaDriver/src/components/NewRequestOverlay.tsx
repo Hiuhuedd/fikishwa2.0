@@ -6,9 +6,15 @@ interface RideRequest {
     rideId: string;
     pickup: { lat: number, lng: number, address?: string };
     dropoff: { lat: number, lng: number, address?: string };
-    fare: number;
-    distanceKm: number;
-    durationMin: number;
+    // Fare — may arrive as 'fare' or 'estimatedFare'
+    fare?: number;
+    estimatedFare?: number;
+    // Distance — may arrive as distanceKm (number) or distance (string e.g. '4.2 km')
+    distanceKm?: number;
+    distance?: string;
+    // Duration — may arrive as durationMin (number) or estimateTime (string e.g. '12 min')
+    durationMin?: number;
+    estimateTime?: string;
     customerName: string;
     vehicleCategory?: string;
     rideType?: string;
@@ -35,13 +41,27 @@ const getHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: nu
 const NewRequestOverlay = ({ request, onAccept, onReject }: Props) => {
     const [isAccepting, setIsAccepting] = useState(false);
 
-    const hasBackendMetric = request?.distanceKm && request.distanceKm > 0;
+    // Resolve fare — handle 'fare', 'estimatedFare', or missing
+    const resolvedFare = request?.fare ?? request?.estimatedFare ?? 0;
+    const displayFare = isNaN(Number(resolvedFare)) ? 0 : Number(resolvedFare);
+
+    // Resolve distance — handle distanceKm (number) or distance (string '4.2 km')
+    const rawDistanceKm = request?.distanceKm;
+    const rawDistanceStr = request?.distance ? parseFloat(request.distance) : null;
+    const hasBackendMetric = rawDistanceKm && rawDistanceKm > 0;
     const distanceVal = hasBackendMetric
-        ? request.distanceKm
-        : (request ? getHaversineDistance(request.pickup.lat, request.pickup.lng, request.dropoff.lat, request.dropoff.lng) : 0);
+        ? rawDistanceKm
+        : rawDistanceStr && !isNaN(rawDistanceStr)
+            ? rawDistanceStr
+            : (request ? getHaversineDistance(request.pickup.lat, request.pickup.lng, request.dropoff.lat, request.dropoff.lng) : 0);
 
     const displayDistance = Number(distanceVal).toFixed(2);
-    const displayTime = request?.durationMin || Math.ceil(Number(distanceVal) * 2.5);
+
+    // Resolve duration — handle durationMin (number) or estimateTime (string '12 min')
+    const rawDuration = request?.durationMin
+        ?? (request?.estimateTime ? parseInt(request.estimateTime) : null)
+        ?? Math.ceil(Number(distanceVal) * 2.5);
+    const displayTime = isNaN(Number(rawDuration)) ? Math.ceil(Number(distanceVal) * 2.5) : rawDuration;
 
     useEffect(() => {
         if (request) {
@@ -91,7 +111,7 @@ const NewRequestOverlay = ({ request, onAccept, onReject }: Props) => {
                 <View style={styles.metricsGrid}>
                     <View style={styles.metricItem}>
                         <Text style={styles.metricLabel}>FARE</Text>
-                        <Text style={styles.metricValue}>KES {Number(request.fare).toLocaleString('en-US')}</Text>
+                        <Text style={styles.metricValue}>KES {displayFare.toLocaleString('en-US')}</Text>
                     </View>
                     <View style={styles.metricDivider} />
                     <View style={styles.metricItem}>

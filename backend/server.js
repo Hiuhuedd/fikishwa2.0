@@ -30,9 +30,7 @@ socketService.initSocket(server);
 
 // Middleware
 const corsOptions = {
-    origin: process.env.NODE_ENV === 'production'
-        ? ['https://fikishwa2-0-backend.onrender.com', 'https://fikishwa.app']
-        : true, // Allow all in dev
+    origin: '*',
     credentials: true,
 };
 app.use(cors(corsOptions));
