@@ -54,7 +54,7 @@ const OtpVerificationScreen = () => {
     const handleVerifyOtp = async () => {
         const fullOtp = otp.join('');
         if (fullOtp.length < OTP_LENGTH) {
-            Alert.alert('Error', `Please enter the complete ${OTP_LENGTH}-digit OTP`);
+            useAlertStore.getState().showError('Error', `Please enter the complete ${OTP_LENGTH}-digit OTP`);
             return;
         }
 
@@ -69,13 +69,13 @@ const OtpVerificationScreen = () => {
                 const { token, userProfile } = response.data.data;
                 await setAuth(userProfile, token);
             } else {
-                Alert.alert('Error', response.data.message || 'Invalid OTP');
+                useAlertStore.getState().showError('Error', response.data.message || 'Invalid OTP');
                 setOtp(Array(OTP_LENGTH).fill(''));
                 inputRefs.current[0]?.focus();
             }
         } catch (error: any) {
             console.error('Verify OTP error:', error);
-            Alert.alert('Error', error.response?.data?.message || 'Verification failed. Please try again.');
+            useAlertStore.getState().showError('Error', error.response?.data?.message || 'Verification failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -92,10 +92,10 @@ const OtpVerificationScreen = () => {
                 setTimer(30);
                 setOtp(Array(OTP_LENGTH).fill(''));
                 inputRefs.current[0]?.focus();
-                Alert.alert('Success', 'A new OTP has been sent to your device');
+                useAlertStore.getState().showSuccess('Success', 'A new OTP has been sent to your device');
             }
         } catch (error: any) {
-            Alert.alert('Error', 'Failed to resend OTP');
+            useAlertStore.getState().showError('Error', 'Failed to resend OTP');
         } finally {
             setLoading(false);
         }
@@ -311,5 +311,6 @@ const styles = StyleSheet.create({
 });
 
 import { Dimensions } from 'react-native';
+import { useAlertStore } from '../../store/alertStore';
 
 export default OtpVerificationScreen;

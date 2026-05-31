@@ -8,6 +8,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../store/authStore';
 import customerApiService from '../../services/customerApiService';
 import { Phone, Mail, ChevronLeft } from 'lucide-react-native';
+import { useAlertStore } from '../../store/alertStore';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -31,12 +32,12 @@ const PhoneLoginScreen = () => {
     const handleSendOTP = async () => {
         const cleaned = identifier.trim();
         if (cleaned.length < 5) {
-            Alert.alert('Invalid Entry', `Please enter a valid ${loginMode}.`);
+            useAlertStore.getState().showAlert('Invalid Entry', `Please enter a valid ${loginMode}.`);
             return;
         }
 
         if (loginMode === 'email' && !emailRegex.test(cleaned)) {
-            Alert.alert('Invalid Email', 'Please enter a valid email address.');
+            useAlertStore.getState().showAlert('Invalid Email', 'Please enter a valid email address.');
             return;
         }
 
@@ -62,7 +63,7 @@ const PhoneLoginScreen = () => {
 
             navigation.navigate('OTP', { phone: formatted, sessionId });
         } catch (err: any) {
-            Alert.alert('Error', err.response?.data?.message || 'Failed to send OTP.');
+            useAlertStore.getState().showError('Error', err.response?.data?.message || 'Failed to send OTP.');
         } finally {
             setLoading(false);
         }

@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Spacing, FontSizes, FontWeights, BorderRadius } from '../../theme';
 import { sendOtp } from '../../services/authService';
+import { useAlertStore } from '../../store/alertStore';
 
 type AuthStackParamList = {
     Login: undefined;
@@ -60,7 +61,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
     const handleSendOtp = async () => {
         if (phone.length < 9) {
-            Alert.alert('Invalid Phone', 'Please enter a valid phone number');
+            useAlertStore.getState().showAlert('Invalid Phone', 'Please enter a valid phone number');
             return;
         }
 
@@ -75,11 +76,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                     phone: fullPhone,
                 });
             } else {
-                Alert.alert('Error', response.message || 'Failed to send OTP');
+                useAlertStore.getState().showError('Error', response.message || 'Failed to send OTP');
             }
         } catch (error: any) {
             const message = error.response?.data?.message || 'Failed to send OTP. Please try again.';
-            Alert.alert('Error', message);
+            useAlertStore.getState().showError('Error', message);
         } finally {
             setLoading(false);
         }

@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { Clock, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import driverApiService from '../../services/driverApiService';
+import { useAlertStore } from '../../store/alertStore';
 
 const StatusPendingScreen = () => {
     const { user, setAuth, logout } = useAuthStore();
@@ -22,7 +23,7 @@ const StatusPendingScreen = () => {
                 await setAuth(refreshedUser, currentToken!);
 
                 if (refreshedUser.registrationStatus === 'approved') {
-                    Alert.alert('Approved!', 'Your account has been approved. Welcome to Fikishwa!');
+                    useAlertStore.getState().showAlert('Approved!', 'Your account has been approved. Welcome to Fikishwa!');
                 }
             }
         } catch (error) {

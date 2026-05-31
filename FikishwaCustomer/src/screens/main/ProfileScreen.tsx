@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAlertStore } from '../../store/alertStore';
 import {
     View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
     StatusBar, ScrollView, Switch, Alert,
@@ -17,7 +18,7 @@ const ProfileScreen = () => {
     const { user, logout } = useAuthStore();
 
     const handleLogout = () => {
-        Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+        useAlertStore.getState().showAlert('Sign Out', 'Are you sure you want to sign out?', 'info', [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Sign Out', style: 'destructive', onPress: () => logout() },
         ]);

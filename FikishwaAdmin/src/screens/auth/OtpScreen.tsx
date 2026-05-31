@@ -22,6 +22,7 @@ import { RouteProp } from '@react-navigation/native';
 import { Colors, Spacing, FontSizes, FontWeights, BorderRadius } from '../../theme';
 import { verifyOtp, decodeToken } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
+import { useAlertStore } from '../../store/alertStore';
 
 type AuthStackParamList = {
     Login: undefined;
@@ -90,7 +91,7 @@ const OtpScreen: React.FC<OtpScreenProps> = ({ navigation, route }) => {
     const handleVerifyOtp = async () => {
         const otpString = getOtpString();
         if (otpString.length !== OTP_LENGTH) {
-            Alert.alert('Invalid OTP', 'Please enter the complete 6-digit OTP');
+            useAlertStore.getState().showAlert('Invalid OTP', 'Please enter the complete 6-digit OTP');
             return;
         }
 
@@ -112,14 +113,14 @@ const OtpScreen: React.FC<OtpScreenProps> = ({ navigation, route }) => {
                     });
                     // Navigation will be handled automatically by AppNavigator
                 } else {
-                    Alert.alert('Error', 'Failed to process authentication');
+                    useAlertStore.getState().showError('Error', 'Failed to process authentication');
                 }
             } else {
-                Alert.alert('Error', response.message || 'Invalid OTP');
+                useAlertStore.getState().showError('Error', response.message || 'Invalid OTP');
             }
         } catch (error: any) {
             const message = error.response?.data?.message || 'Verification failed. Please try again.';
-            Alert.alert('Error', message);
+            useAlertStore.getState().showError('Error', message);
         } finally {
             setLoading(false);
         }

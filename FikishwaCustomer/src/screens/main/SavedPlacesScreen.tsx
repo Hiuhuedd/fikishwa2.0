@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAlertStore } from '../../store/alertStore';
 import {
     View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
     StatusBar, FlatList, Alert
@@ -19,10 +20,8 @@ const SavedPlacesScreen = () => {
     const savedPlaces = user?.savedPlaces || [];
 
     const handleRemovePlace = (label: string) => {
-        Alert.alert(
-            'Remove Place',
-            `Are you sure you want to remove "${label}"?`,
-            [
+        useAlertStore.getState().showAlert(
+            'Remove Place', `Are you sure you want to remove "${label}"?`, 'info', [
                 { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Remove',
@@ -32,8 +31,7 @@ const SavedPlacesScreen = () => {
                         updateUser({ savedPlaces: updated });
                     }
                 },
-            ]
-        );
+            ]);
     };
 
     const getIcon = (label: string) => {

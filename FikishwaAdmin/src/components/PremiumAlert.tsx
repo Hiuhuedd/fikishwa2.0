@@ -5,13 +5,11 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
-    Dimensions,
 } from 'react-native';
 import { CheckCircle2, AlertTriangle, XCircle, Info } from 'lucide-react-native';
-import { lightColors as colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
+import { Colors, Spacing, BorderRadius } from '../theme';
 
-interface PremiumAlertButton {
+export interface PremiumAlertButton {
     text: string;
     onPress?: () => void;
     style?: 'default' | 'cancel' | 'destructive';
@@ -41,10 +39,10 @@ const PremiumAlert = ({
             <View style={styles.overlay}>
                 <View style={styles.alertBox}>
                     <View style={styles.iconContainer}>
-                        {type === 'success' && <CheckCircle2 size={48} color={colors.success || '#34C759'} />}
-                        {type === 'warning' && <AlertTriangle size={48} color={colors.warning || '#FFCC00'} />}
-                        {type === 'error' && <XCircle size={48} color={colors.error || '#FF3B30'} />}
-                        {type === 'info' && <Info size={48} color={colors.primary} />}
+                        {type === 'success' && <CheckCircle2 size={48} color={Colors.success || '#34C759'} />}
+                        {type === 'warning' && <AlertTriangle size={48} color={Colors.warning || '#FFCC00'} />}
+                        {type === 'error' && <XCircle size={48} color={Colors.error || '#FF3B30'} />}
+                        {type === 'info' && <Info size={48} color={Colors.primary} />}
                     </View>
                     <Text style={styles.title}>{title}</Text>
                     <Text style={styles.message}>{message}</Text>
@@ -82,12 +80,12 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.6)',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: spacing.xl,
+        padding: Spacing.xl,
     },
     alertBox: {
-        backgroundColor: colors.background,
-        borderRadius: spacing.borderRadiusLg,
-        padding: spacing.lg,
+        backgroundColor: Colors.surface,
+        borderRadius: BorderRadius.lg,
+        padding: Spacing.lg,
         width: '100%',
         maxWidth: 400,
         alignItems: 'center',
@@ -98,59 +96,59 @@ const styles = StyleSheet.create({
         elevation: 24,
     },
     iconContainer: {
-        marginBottom: spacing.md,
+        marginBottom: Spacing.md,
         alignItems: 'center',
         justifyContent: 'center',
     },
     title: {
         fontSize: 22,
         fontWeight: '800',
-        color: colors.textPrimary,
-        marginBottom: spacing.sm,
+        color: Colors.textPrimary,
+        marginBottom: Spacing.sm,
         textAlign: 'center',
         letterSpacing: -0.5,
     },
     message: {
         fontSize: 16,
-        color: colors.textSecondary,
+        color: Colors.textSecondary,
         textAlign: 'center',
-        marginBottom: spacing.xl,
+        marginBottom: Spacing.xl,
         lineHeight: 22,
     },
     buttonContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
-        gap: spacing.md,
+        gap: Spacing.md,
     },
     button: {
         flex: 1,
-        paddingVertical: spacing.md,
-        borderRadius: spacing.borderRadius,
-        backgroundColor: colors.primary,
+        paddingVertical: Spacing.md,
+        borderRadius: BorderRadius.md,
+        backgroundColor: Colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
     },
     buttonText: {
         fontSize: 16,
         fontWeight: '700',
-        color: colors.textOnPrimary,
+        color: Colors.textPrimary,
     },
     cancelBtn: {
-        backgroundColor: colors.backgroundHover,
+        backgroundColor: Colors.surfaceLight,
     },
     cancelText: {
-        color: colors.textSecondary,
+        color: Colors.textSecondary,
     },
     destructiveBtn: {
-        backgroundColor: colors.error,
+        backgroundColor: Colors.error,
     },
     destructiveText: {
         color: '#fff',
     },
     verticalBtn: {
         width: '100%',
-        marginBottom: spacing.sm,
+        marginBottom: Spacing.sm,
     }
 });
 

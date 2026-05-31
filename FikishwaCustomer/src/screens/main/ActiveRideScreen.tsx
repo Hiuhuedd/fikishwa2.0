@@ -16,6 +16,7 @@ import { decodePolyline } from '../../utils/polyline';
 import PremiumModal from '../../components/PremiumModal';
 import PremiumAlert from '../../components/PremiumAlert';
 import SafetyToolkitModal from '../../components/SafetyToolkitModal';
+import { useAlertStore } from '../../store/alertStore';
 
 const carMarkerImg = require('../../assets/images/car_marker.png');
 
@@ -137,7 +138,7 @@ const ActiveRideScreen = () => {
                 const cancelMsg = cancelledByCustomer
                     ? 'You have successfully cancelled this ride.'
                     : 'The driver has cancelled the ride.';
-                Alert.alert('Ride Cancelled', cancelMsg);
+                useAlertStore.getState().showAlert('Ride Cancelled', cancelMsg);
                 navigation.replace('Home');
                 return;
             }
@@ -188,7 +189,7 @@ const ActiveRideScreen = () => {
         } else if (driver?.phone) {
             Linking.openURL(`tel:${driver.phone}`);
         } else {
-            Alert.alert('Unable to call', 'Driver phone number is not available.');
+            useAlertStore.getState().showAlert('Unable to call', 'Driver phone number is not available.');
         }
     };
 
@@ -198,15 +199,13 @@ const ActiveRideScreen = () => {
         } else if (driver?.phone) {
             Linking.openURL(`sms:${driver.phone}`);
         } else {
-            Alert.alert('Unable to message', 'Driver phone number is not available.');
+            useAlertStore.getState().showAlert('Unable to message', 'Driver phone number is not available.');
         }
     };
 
     const handleCancelRide = () => {
-        Alert.alert(
-            'Cancel Ride?',
-            'Are you sure you want to cancel this ride? A cancellation fee may apply if the driver has already arrived.',
-            [
+        useAlertStore.getState().showAlert(
+            'Cancel Ride?', 'Are you sure you want to cancel this ride? A cancellation fee may apply if the driver has already arrived.', 'info', [
                 { text: 'Keep Ride', style: 'cancel' },
                 {
                     text: 'Cancel Ride',
@@ -221,12 +220,11 @@ const ActiveRideScreen = () => {
                                 navigation.replace('Home');
                             }
                         } catch (error) {
-                            Alert.alert('Error', 'Failed to cancel ride. Please try again.');
+                            useAlertStore.getState().showError('Error', 'Failed to cancel ride. Please try again.');
                         }
                     }
                 }
-            ]
-        );
+            ]);
     };
 
     const isDarkTheme = colors.mapStyle.toString() === 'dark';

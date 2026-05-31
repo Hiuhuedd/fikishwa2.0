@@ -13,6 +13,7 @@ export interface AppConfig {
     termsUrl?: string;
     privacyUrl?: string;
     currency?: string; // Default: KES
+    maxDispatchRadius?: number | null;
     [key: string]: any; // Allow other config keys
 }
 

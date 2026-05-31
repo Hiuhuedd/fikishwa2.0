@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, TextInput, Image as RNImage, ActivityIndicator, Alert } from 'react-native';
-import { ChevronLeft, User, Phone, Mail, MapPin, ChevronRight, Camera, Check, X } from 'lucide-react-native';
+import { ChevronLeft, User, Phone, Mail, MapPin, ChevronRight, Camera, Check, X, FileText, ShieldCheck } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/useAuthStore';
 import * as ImagePicker from 'expo-image-picker';
 import driverApiService from '../../services/driverApiService';
 import { colors } from '../../theme/colors';
+import { useAlertStore } from '../../store/alertStore';
 
 const MenuItem = ({ icon: Icon, title, value, field, placeholder, isEditing, formData, setFormData, showChevron = true }: any) => (
     <View style={styles.menuItem}>
@@ -86,7 +87,7 @@ const AccountScreen = () => {
                 }
             } catch (error) {
                 console.error('Image Upload Error:', error);
-                Alert.alert('Error', 'Failed to upload image');
+                useAlertStore.getState().showError('Error', 'Failed to upload image');
             } finally {
                 setIsLoading(false);
             }
@@ -100,11 +101,11 @@ const AccountScreen = () => {
             if (response.data.success) {
                 await updateUser(response.data.data);
                 setIsEditing(false);
-                Alert.alert('Success', 'Profile updated successfully');
+                useAlertStore.getState().showSuccess('Success', 'Profile updated successfully');
             }
         } catch (error: any) {
             console.error('Update Profile Error:', error);
-            Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
+            useAlertStore.getState().showError('Error', error.response?.data?.message || 'Failed to update profile');
         } finally {
             setIsLoading(false);
         }
@@ -205,6 +206,31 @@ const AccountScreen = () => {
                     />
                 </View>
 
+                {!isEditing && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Legal & App Info</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('TermsAgreement' as never)}>
+                            <MenuItem
+                                icon={FileText}
+                                title="Terms of Service"
+                                value="Read our terms and conditions"
+                                showChevron={true}
+                            />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy' as never)}>
+                            <MenuItem
+                                icon={ShieldCheck}
+                                title="Privacy Policy"
+                                value="How we handle your data"
+                                showChevron={true}
+                            />
+                        </TouchableOpacity>
+                        <View style={styles.versionContainer}>
+                            <Text style={styles.versionText}>Version 1.0.0</Text>
+                        </View>
+                    </View>
+                )}
+
 
                 <TouchableOpacity style={styles.deleteBtn}>
                     <Text style={styles.deleteText}>Delete Account</Text>
@@ -237,7 +263,19 @@ const styles = StyleSheet.create({
     menuItemValue: { fontSize: 16, fontWeight: '600', color: '#1E293B', marginTop: 2 },
     input: { fontSize: 16, fontWeight: '600', color: '#1E293B', marginTop: 2, padding: 0 },
     deleteBtn: { marginTop: 8, alignItems: 'center', padding: 16 },
-    deleteText: { color: '#EF4444', fontSize: 16, fontWeight: '600' }
+    deleteText: { color: '#EF4444', fontSize: 16, fontWeight: '600' },
+    versionContainer: {
+        padding: 16,
+        alignItems: 'center',
+        borderTopWidth: 1,
+        borderTopColor: '#F1F5F9',
+        marginTop: 8,
+    },
+    versionText: {
+        fontSize: 12,
+        color: '#94A3B8',
+        fontWeight: '500',
+    },
 });
 
 export default AccountScreen;

@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store/authStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import customerApiService from '../../services/customerApiService';
 import { ChevronLeft, Pencil, Clock } from 'lucide-react-native';
+import { useAlertStore } from '../../store/alertStore';
 
 const OTP_LENGTH = 4;
 
@@ -104,13 +105,13 @@ const OTPScreen = () => {
                     }
                 }
             } else {
-                Alert.alert('Invalid Code', 'The code you entered is incorrect.');
+                useAlertStore.getState().showAlert('Invalid Code', 'The code you entered is incorrect.');
                 setOtp(Array(OTP_LENGTH).fill(''));
                 setFocusedIndex(0);
                 inputRefs.current[0]?.focus();
             }
         } catch (err: any) {
-            Alert.alert('Error', err.response?.data?.message || 'Verification failed.');
+            useAlertStore.getState().showError('Error', err.response?.data?.message || 'Verification failed.');
             setOtp(Array(OTP_LENGTH).fill(''));
             setFocusedIndex(0);
             inputRefs.current[0]?.focus();
@@ -125,9 +126,9 @@ const OTPScreen = () => {
             const response = await customerApiService.sendOtp(phone);
             setSessionId(response.data.data.sessionId);
             setCountdown(60);
-            Alert.alert('Sent', 'A new code has been sent.');
+            useAlertStore.getState().showAlert('Sent', 'A new code has been sent.');
         } catch {
-            Alert.alert('Error', 'Failed to resend code.');
+            useAlertStore.getState().showError('Error', 'Failed to resend code.');
         }
     };
 

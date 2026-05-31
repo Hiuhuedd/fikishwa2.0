@@ -38,14 +38,6 @@ const WelcomeScreen = () => {
             {/* Buttons */}
             <View style={[styles.footer, { paddingHorizontal: spacing.screenPadding }]}>
                 <TouchableOpacity
-                    style={[styles.outlineBtn, { borderColor: colors.primary }]}
-                    onPress={() => navigation.navigate('Register')}
-                    activeOpacity={0.8}
-                >
-                    <Text style={[styles.outlineBtnText, { color: colors.primary }]}>Register</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
                     style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
                     onPress={() => navigation.navigate('PhoneLogin')}
                     activeOpacity={0.85}

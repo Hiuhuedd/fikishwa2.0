@@ -15,6 +15,7 @@ import { ArrowLeft } from 'lucide-react-native';
 import { Colors, Spacing, FontSizes, FontWeights, BorderRadius, Shadows } from '../../theme';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { getAllRides, Ride } from '../../services/rideService';
+import { useAlertStore } from '../../store/alertStore';
 
 const RidesScreen: React.FC = () => {
     const navigation = useNavigation();
@@ -43,7 +44,7 @@ const RidesScreen: React.FC = () => {
             }
         } catch (error) {
             console.error('Error fetching rides:', error);
-            Alert.alert('Error', 'Failed to load rides');
+            useAlertStore.getState().showError('Error', 'Failed to load rides');
         } finally {
             setLoading(false);
             setRefreshing(false);

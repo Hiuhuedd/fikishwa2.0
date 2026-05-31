@@ -5,10 +5,17 @@ import { useAuthStore } from '../../store/useAuthStore';
 import api from '../../services/api';
 import driverApiService from '../../services/driverApiService';
 import { Car, Mail, Lock, LogIn } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AuthStackParamList } from '../../navigation/AuthNavigator';
+import { useAlertStore } from '../../store/alertStore';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+type NavigationProp = NativeStackNavigationProp<AuthStackParamList, 'PhoneInput'>;
+
 const LoginScreen = () => {
+    const navigation = useNavigation<NavigationProp>();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -16,12 +23,12 @@ const LoginScreen = () => {
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Error', 'Please enter both email and password');
+            useAlertStore.getState().showError('Error', 'Please enter both email and password');
             return;
         }
 
         if (!emailRegex.test(email)) {
-            Alert.alert('Invalid Email', 'Please enter a valid email address.');
+            useAlertStore.getState().showAlert('Invalid Email', 'Please enter a valid email address.');
             return;
         }
 
@@ -32,7 +39,7 @@ const LoginScreen = () => {
             await setAuth(user, token);
         } catch (error: any) {
             console.error('Login error:', error);
-            Alert.alert('Login Failed', error.response?.data?.message || 'Invalid email or password');
+            useAlertStore.getState().showAlert('Login Failed', error.response?.data?.message || 'Invalid email or password');
         } finally {
             setLoading(false);
         }
@@ -94,11 +101,23 @@ const LoginScreen = () => {
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>Don't have an account? </Text>
-                    <TouchableOpacity>
-                        <Text style={styles.signupLink}>Sign Up</Text>
-                    </TouchableOpacity>
+                <View style={styles.footerContainer}>
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>Don't have an account? </Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('PhoneInput')}>
+                            <Text style={styles.signupLink}>Sign Up</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.legalLinks}>
+                        <TouchableOpacity onPress={() => navigation.navigate('TermsAgreement')}>
+                            <Text style={styles.legalLink}>Terms</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.legalDivider}> • </Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
+                            <Text style={styles.legalLink}>Privacy</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
@@ -184,10 +203,13 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '600',
     },
+    footerContainer: {
+        marginTop: 32,
+        alignItems: 'center',
+    },
     footer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        marginTop: 32,
     },
     footerText: {
         color: '#666',
@@ -197,6 +219,21 @@ const styles = StyleSheet.create({
         color: '#001C3D',
         fontSize: 15,
         fontWeight: '600',
+    },
+    legalLinks: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 16,
+        opacity: 0.7,
+    },
+    legalLink: {
+        color: '#001C3D',
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    legalDivider: {
+        color: '#94A3B8',
+        fontSize: 13,
     },
 });
 

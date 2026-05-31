@@ -6,6 +6,7 @@ import { Car, Smartphone, ArrowRight, Mail } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAlertStore } from '../../store/alertStore';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList, 'PhoneInput'>;
 
@@ -31,17 +32,17 @@ const PhoneInputScreen = () => {
     const handleSendOtp = async () => {
         const cleaned = identifier.trim();
         if (!cleaned) {
-            Alert.alert('Error', `Please enter your ${loginMode === 'email' ? 'email' : 'phone number'}`);
+            useAlertStore.getState().showError('Error', `Please enter your ${loginMode === 'email' ? 'email' : 'phone number'}`);
             return;
         }
 
         // Basic validation
         if (loginMode === 'phone' && cleaned.length < 9) {
-            Alert.alert('Error', 'Please enter a valid phone number');
+            useAlertStore.getState().showError('Error', 'Please enter a valid phone number');
             return;
         }
         if (loginMode === 'email' && !emailRegex.test(cleaned)) {
-            Alert.alert('Error', 'Please enter a valid email address');
+            useAlertStore.getState().showError('Error', 'Please enter a valid email address');
             return;
         }
 
@@ -65,11 +66,11 @@ const PhoneInputScreen = () => {
                 setSessionId(response.data.data.sessionId);
                 navigation.navigate('OtpVerification');
             } else {
-                Alert.alert('Error', response.data.message || 'Failed to send OTP');
+                useAlertStore.getState().showError('Error', response.data.message || 'Failed to send OTP');
             }
         } catch (error: any) {
             console.error('Send OTP error:', error);
-            Alert.alert('Error', error.response?.data?.message || 'Failed to send OTP. Please try again.');
+            useAlertStore.getState().showError('Error', error.response?.data?.message || 'Failed to send OTP. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -147,9 +148,15 @@ const PhoneInputScreen = () => {
 
                 <View style={styles.footer}>
                     <Text style={styles.footerText}>By proceeding, you agree to our </Text>
-                    <TouchableOpacity>
-                        <Text style={styles.link}>Terms & Conditions</Text>
-                    </TouchableOpacity>
+                    <View style={styles.linksContainer}>
+                        <TouchableOpacity onPress={() => navigation.navigate('TermsAgreement')}>
+                            <Text style={styles.link}>Terms & Conditions</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.footerText}> and </Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
+                            <Text style={styles.link}>Privacy Policy</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
@@ -255,6 +262,10 @@ const styles = StyleSheet.create({
         color: '#001C3D',
         fontSize: 14,
         fontWeight: '600',
+    },
+    linksContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginTop: 4,
     },
     modeToggle: {

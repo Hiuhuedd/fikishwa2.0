@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import { useAlertStore } from '../../store/alertStore';
 
 type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList, 'DocumentUpload'>;
 
@@ -50,7 +51,7 @@ const DocumentUploadScreen = () => {
     const pickDocument = async (field: keyof typeof docs) => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('Permission needed', 'We need access to your gallery to upload documents');
+            useAlertStore.getState().showAlert('Permission needed', 'We need access to your gallery to upload documents');
             return;
         }
 
@@ -86,7 +87,7 @@ const DocumentUploadScreen = () => {
             }
         } catch (error) {
             console.error('Upload Error:', error);
-            Alert.alert('Upload Failed', 'There was an issue uploading your document');
+            useAlertStore.getState().showAlert('Upload Failed', 'There was an issue uploading your document');
         } finally {
             setUploading(null);
         }
@@ -94,7 +95,7 @@ const DocumentUploadScreen = () => {
 
     const handleNext = async () => {
         if (!docs.insuranceUrl || !docs.inspectionUrl || !docs.carRegistrationUrl || !docs.carImageUrl) {
-            Alert.alert('Missing Documents', 'Please upload all required documents to proceed');
+            useAlertStore.getState().showAlert('Missing Documents', 'Please upload all required documents to proceed');
             return;
         }
         setLoading(true);

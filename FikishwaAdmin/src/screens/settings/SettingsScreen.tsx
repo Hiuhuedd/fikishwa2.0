@@ -16,6 +16,7 @@ import { Colors, Spacing, FontSizes, FontWeights, BorderRadius, Shadows } from '
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { getConfig, updateConfig, AppConfig } from '../../services/configService';
+import { useAlertStore } from '../../store/alertStore';
 
 const SettingsScreen: React.FC = () => {
     const navigation = useNavigation();
@@ -32,6 +33,7 @@ const SettingsScreen: React.FC = () => {
     const [paybillNumber, setPaybillNumber] = useState('');
     const [supportPhone, setSupportPhone] = useState('');
     const [supportEmail, setSupportEmail] = useState('');
+    const [maxDispatchRadius, setMaxDispatchRadius] = useState('');
 
     // Edit Mode
     const [isEditing, setIsEditing] = useState(false);
@@ -46,7 +48,7 @@ const SettingsScreen: React.FC = () => {
             }
         } catch (error) {
             console.error('Error fetching config:', error);
-            Alert.alert('Error', 'Failed to load configuration');
+            useAlertStore.getState().showError('Error', 'Failed to load configuration');
         } finally {
             setLoading(false);
         }
@@ -58,6 +60,7 @@ const SettingsScreen: React.FC = () => {
         setPaybillNumber(data.paybillNumber?.toString() || '');
         setSupportPhone(data.supportPhone || '');
         setSupportEmail(data.supportEmail || '');
+        setMaxDispatchRadius(data.maxDispatchRadius ? data.maxDispatchRadius.toString() : '');
     };
 
     useEffect(() => {
@@ -69,19 +72,16 @@ const SettingsScreen: React.FC = () => {
     };
 
     const handleLogout = async () => {
-        Alert.alert(
-            'Logout',
-            'Are you sure you want to logout?',
-            [
+        useAlertStore.getState().showAlert(
+            'Logout', 'Are you sure you want to logout?', 'info', [
                 { text: 'Cancel', style: 'cancel' },
                 { text: 'Logout', style: 'destructive', onPress: async () => await logout() }
-            ]
-        );
+            ]);
     };
 
     const handleSave = async () => {
         if (!commissionRate || !maxOwed) {
-            Alert.alert('Validation Error', 'Commission Rate and Max Owed are required');
+            useAlertStore.getState().showError('Validation Error', 'Commission Rate and Max Owed are required');
             return;
         }
 
@@ -93,18 +93,19 @@ const SettingsScreen: React.FC = () => {
                 paybillNumber,
                 supportPhone,
                 supportEmail,
+                maxDispatchRadius: maxDispatchRadius ? parseFloat(maxDispatchRadius) : null,
             };
 
             const response = await updateConfig(updates);
             if (response.success) {
                 setConfig(response.config);
                 setIsEditing(false);
-                Alert.alert('Success', 'Configuration updated successfully');
+                useAlertStore.getState().showSuccess('Success', 'Configuration updated successfully');
             } else {
-                Alert.alert('Error', 'Failed to update configuration');
+                useAlertStore.getState().showError('Error', 'Failed to update configuration');
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to update configuration');
+            useAlertStore.getState().showError('Error', error.message || 'Failed to update configuration');
         } finally {
             setSaving(false);
         }
@@ -188,6 +189,24 @@ const SettingsScreen: React.FC = () => {
                                 />
                             ) : (
                                 <Text style={styles.value}>KES {config?.maxOwedCommission?.toLocaleString()}</Text>
+                            )}
+                        </View>
+
+                        <View style={styles.divider} />
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Max Dispatch Radius (km)</Text>
+                            <Text style={styles.helperText}>Leave empty for no limit</Text>
+                            {isEditing ? (
+                                <TextInput
+                                    style={styles.input}
+                                    value={maxDispatchRadius}
+                                    onChangeText={setMaxDispatchRadius}
+                                    keyboardType="numeric"
+                                    placeholder="e.g. 10"
+                                />
+                            ) : (
+                                <Text style={styles.value}>{config?.maxDispatchRadius ? `${config.maxDispatchRadius} km` : 'No Limit'}</Text>
                             )}
                         </View>
 

@@ -7,7 +7,8 @@ import {
     TouchableOpacity,
     Dimensions,
 } from 'react-native';
-import { colors } from '../theme/colors';
+import { CheckCircle2, AlertTriangle, XCircle, Info } from 'lucide-react-native';
+import { lightColors as colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
 interface PremiumAlertButton {
@@ -20,6 +21,7 @@ interface PremiumAlertProps {
     visible: boolean;
     title: string;
     message: string;
+    type?: 'success' | 'warning' | 'error' | 'info';
     buttons?: PremiumAlertButton[];
 }
 
@@ -27,6 +29,7 @@ const PremiumAlert = ({
     visible,
     title,
     message,
+    type = 'info',
     buttons = [{ text: 'OK' }],
 }: PremiumAlertProps) => {
     return (
@@ -37,6 +40,12 @@ const PremiumAlert = ({
         >
             <View style={styles.overlay}>
                 <View style={styles.alertBox}>
+                    <View style={styles.iconContainer}>
+                        {type === 'success' && <CheckCircle2 size={48} color={colors.success || '#34C759'} />}
+                        {type === 'warning' && <AlertTriangle size={48} color={colors.warning || '#FFCC00'} />}
+                        {type === 'error' && <XCircle size={48} color={colors.error || '#FF3B30'} />}
+                        {type === 'info' && <Info size={48} color={colors.primary} />}
+                    </View>
                     <Text style={styles.title}>{title}</Text>
                     <Text style={styles.message}>{message}</Text>
                     <View style={styles.buttonContainer}>
@@ -87,6 +96,11 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 20,
         elevation: 24,
+    },
+    iconContainer: {
+        marginBottom: spacing.md,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     title: {
         fontSize: 22,

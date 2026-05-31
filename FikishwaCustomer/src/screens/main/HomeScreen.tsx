@@ -28,6 +28,7 @@ import SavedPlaceSelector from '../../components/SavedPlaceSelector';
 import ErrorBanner from '../../components/ErrorBanner';
 import ActiveRideBanner from '../../components/ActiveRideBanner';
 import CustomerSidebar from '../../components/CustomerSidebar';
+import { useAlertStore } from '../../store/alertStore';
 
 // QUICK_PLACES is now computed dynamically inside HomeScreen
 
@@ -379,7 +380,7 @@ const HomeScreen = () => {
                             useAuthStore.getState().updateUser({ savedPlaces: updatedSaved });
                             setIsSelectingSavedPlace(false);
                             handleLocateMe();
-                            Alert.alert('Success', `${selectingPlaceType} location updated.`);
+                            useAlertStore.getState().showSuccess('Success', `${selectingPlaceType} location updated.`);
                         }
                     }}
                 />

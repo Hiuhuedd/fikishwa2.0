@@ -7,6 +7,7 @@ import { User, Mail, MapPin, Phone, ArrowRight, ChevronLeft } from 'lucide-react
 import { useNavigation } from '@react-navigation/native';
 import { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAlertStore } from '../../store/alertStore';
 
 type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList, 'PersonalDetails'>;
 
@@ -22,13 +23,13 @@ const PersonalDetailsScreen = () => {
 
     const handleNext = async () => {
         if (!name || !email || !phone || !address) {
-            Alert.alert('Error', 'Please fill in all fields');
+            useAlertStore.getState().showError('Error', 'Please fill in all fields');
             return;
         }
 
         // Basic phone validation
         if (phone.length < 9) {
-            Alert.alert('Error', 'Please enter a valid phone number');
+            useAlertStore.getState().showError('Error', 'Please enter a valid phone number');
             return;
         }
 
@@ -49,7 +50,7 @@ const PersonalDetailsScreen = () => {
             }
         } catch (error: any) {
             console.error('Update profile error:', error);
-            Alert.alert('Error', 'Failed to update profile');
+            useAlertStore.getState().showError('Error', 'Failed to update profile');
         } finally {
             setLoading(false);
         }
@@ -64,7 +65,7 @@ const PersonalDetailsScreen = () => {
                 <View style={styles.header}>
                     <View style={styles.titleRow}>
                         <TouchableOpacity
-                            onPress={() => Alert.alert('Sign Out', 'Do you want to sign out and change your phone number?', [
+                            onPress={() => useAlertStore.getState().showAlert('Sign Out', 'Do you want to sign out and change your phone number?', 'info', [
                                 { text: 'Cancel', style: 'cancel' },
                                 { text: 'Sign Out', onPress: logout, style: 'destructive' }
                             ])}

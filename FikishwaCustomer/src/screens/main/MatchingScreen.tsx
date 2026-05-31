@@ -16,6 +16,7 @@ import { decodePolyline } from '../../utils/polyline';
 import { GOOGLE_MAPS_API_KEY } from '../../config/googleMaps';
 import PremiumModal from '../../components/PremiumModal';
 import PremiumAlert from '../../components/PremiumAlert';
+import { useAlertStore } from '../../store/alertStore';
 const carMarkerImg = require('../../assets/images/car_marker.png');
 
 const CANCELLATION_REASONS = [
@@ -114,7 +115,7 @@ const MatchingScreen = () => {
             navigation.replace('Home');
         } catch (error: any) {
             console.error('[Matching] Cancel error:', error.response?.data || error.message);
-            Alert.alert('Error', 'Failed to cancel ride. Please try again.');
+            useAlertStore.getState().showError('Error', 'Failed to cancel ride. Please try again.');
         } finally {
             setSelectingReason(false);
         }
@@ -292,7 +293,7 @@ const MatchingScreen = () => {
                 const cancelMsg = cancelledByCustomer
                     ? 'You have successfully cancelled this ride.'
                     : 'The driver has cancelled the ride.';
-                Alert.alert('Ride Cancelled', cancelMsg);
+                useAlertStore.getState().showAlert('Ride Cancelled', cancelMsg);
                 navigation.replace('Home');
                 return;
             }
@@ -614,7 +615,7 @@ const MatchingScreen = () => {
                                     if (phone && phone !== 'N/A') {
                                         Linking.openURL(`tel:${phone}`);
                                     } else {
-                                        Alert.alert('Error', 'Phone not available');
+                                        useAlertStore.getState().showError('Error', 'Phone not available');
                                     }
                                 }}
                             >

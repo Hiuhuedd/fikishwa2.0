@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import { useAlertStore } from '../../store/alertStore';
 
 type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList, 'VehicleInfo'>;
 
@@ -82,7 +83,7 @@ const VehicleInfoScreen = () => {
                 await driverApiService.updateProfile({ [field]: url });
             }
         } catch (error) {
-            Alert.alert('Upload Failed', 'Failed to upload profile photo');
+            useAlertStore.getState().showAlert('Upload Failed', 'Failed to upload profile photo');
         } finally {
             setUploading(null);
         }
@@ -90,7 +91,7 @@ const VehicleInfoScreen = () => {
 
     const handleSubmit = async () => {
         if (!make || !model || !year || !plate || !profilePhotoUrl) {
-            Alert.alert('Error', 'Please provide all required vehicle details and a profile photo');
+            useAlertStore.getState().showError('Error', 'Please provide all required vehicle details and a profile photo');
             return;
         }
 
@@ -113,7 +114,7 @@ const VehicleInfoScreen = () => {
             }
         } catch (error: any) {
             console.error('Submit registration error:', error);
-            Alert.alert('Error', error.response?.data?.message || 'Failed to submit registration');
+            useAlertStore.getState().showError('Error', error.response?.data?.message || 'Failed to submit registration');
         } finally {
             setLoading(false);
         }

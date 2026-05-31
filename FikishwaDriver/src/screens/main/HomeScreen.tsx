@@ -21,6 +21,7 @@ import PremiumModal from '../../components/PremiumModal';
 import PremiumAlert from '../../components/PremiumAlert';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { useAlertStore } from '../../store/alertStore';
 
 const GOOGLE_MAPS_APIKEY = "AIzaSyCTC78aB0ukv5ERXLwBM_tyiFIy13697wc";
 
@@ -236,7 +237,7 @@ const HomeScreen = () => {
 
     const toggleOnlineStatus = async () => {
         if (!user || user.registrationStatus !== 'approved') {
-            Alert.alert('Activation Required', 'Your account must be approved before you can go online.');
+            useAlertStore.getState().showAlert('Activation Required', 'Your account must be approved before you can go online.');
             return;
         }
 
@@ -247,9 +248,8 @@ const HomeScreen = () => {
                 setIsOnline(false);
             } else {
                 if (isBlocked) {
-                    Alert.alert(
-                        'Account Disabled',
-                        `Your account is disabled because you owe KES ${owedCommission.toFixed(2)} in commission. Please settle your balance.`,
+                    useAlertStore.getState().showAlert(
+                        'Account Disabled', `Your account is disabled because you owe KES ${owedCommission.toFixed(2)} in commission. Please settle your balance.`,
                         [
                             { text: 'Cancel', style: 'cancel' },
                             { text: 'Pay Now', onPress: () => navigation.navigate('Earnings') }
@@ -259,7 +259,7 @@ const HomeScreen = () => {
                     return;
                 }
                 if (!location) {
-                    Alert.alert('Location Required', 'Please wait for your location to be determined.');
+                    useAlertStore.getState().showAlert('Location Required', 'Please wait for your location to be determined.');
                     return;
                 }
                 const response = await driverApiService.goOnline({
@@ -276,7 +276,7 @@ const HomeScreen = () => {
                 }
             }
         } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.message || 'Failed to update status');
+            useAlertStore.getState().showError('Error', error.response?.data?.message || 'Failed to update status');
         } finally {
             setLoading(false);
         }
@@ -292,11 +292,11 @@ const HomeScreen = () => {
                     setCurrentRequest(null);
                 }
             } else {
-                Alert.alert('Error', response.data.message || 'Failed to accept ride');
+                useAlertStore.getState().showError('Error', response.data.message || 'Failed to accept ride');
                 setCurrentRequest(null);
             }
         } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.message || 'Failed to accept ride');
+            useAlertStore.getState().showError('Error', error.response?.data?.message || 'Failed to accept ride');
             setCurrentRequest(null);
         }
     };
@@ -305,7 +305,7 @@ const HomeScreen = () => {
         const id = activeRide?.rideId || activeRide?.id || activeRide?._id;
         console.log('🏁 [DIAGNOSTIC] handleArrived request | ID:', id, 'Status: arrived');
         if (!id) {
-            Alert.alert('Error', 'INTERNAL ERROR: Ride ID is missing. Please restart the app.');
+            useAlertStore.getState().showError('Error', 'INTERNAL ERROR: Ride ID is missing. Please restart the app.');
             return;
         }
 
@@ -321,7 +321,7 @@ const HomeScreen = () => {
             }
         } catch (error: any) {
             console.error('🔴 Arrived Status Update ERROR:', error.response?.data || error.message);
-            Alert.alert('Error', 'Failed to update status: ' + (error.response?.data?.message || error.message));
+            useAlertStore.getState().showError('Error', 'Failed to update status: ' + (error.response?.data?.message || error.message));
         } finally {
             setIsConfirmingArrival(false);
         }
@@ -331,7 +331,7 @@ const HomeScreen = () => {
         const id = activeRide?.rideId || activeRide?.id || activeRide?._id;
         console.log('🏁 [DIAGNOSTIC] handleStartRide request | ID:', id, 'Status: in_progress');
         if (!id) {
-            Alert.alert('Error', 'INTERNAL ERROR: Ride ID is missing. Please restart the app.');
+            useAlertStore.getState().showError('Error', 'INTERNAL ERROR: Ride ID is missing. Please restart the app.');
             return;
         }
 
@@ -343,7 +343,7 @@ const HomeScreen = () => {
             }
         } catch (error: any) {
             console.error('🔴 Start Ride ERROR:', error.response?.data || error.message);
-            Alert.alert('Error', 'Failed to start ride');
+            useAlertStore.getState().showError('Error', 'Failed to start ride');
         } finally {
             setIsStartingRide(false);
         }
@@ -353,7 +353,7 @@ const HomeScreen = () => {
         const id = activeRide?.rideId || activeRide?.id || activeRide?._id;
         console.log('🏁 [DIAGNOSTIC] handleCompleteRide request | ID:', id, 'Status: completed');
         if (!id) {
-            Alert.alert('Error', 'INTERNAL ERROR: Ride ID is missing.');
+            useAlertStore.getState().showError('Error', 'INTERNAL ERROR: Ride ID is missing.');
             return;
         }
 
@@ -371,7 +371,7 @@ const HomeScreen = () => {
             }
         } catch (error: any) {
             console.error('🔴 Complete Ride ERROR:', error.response?.data || error.message);
-            Alert.alert('Error', 'Failed to complete ride');
+            useAlertStore.getState().showError('Error', 'Failed to complete ride');
         } finally {
             setIsCompletingRide(false);
         }
@@ -381,7 +381,7 @@ const HomeScreen = () => {
         const id = activeRide?.rideId || activeRide?.id || activeRide?._id;
         console.log('🏁 [DIAGNOSTIC] handleConfirmPayment request | ID:', id, 'Status: paid');
         if (!id) {
-            Alert.alert('Error', 'INTERNAL ERROR: Ride ID is missing.');
+            useAlertStore.getState().showError('Error', 'INTERNAL ERROR: Ride ID is missing.');
             return;
         }
 
@@ -389,12 +389,12 @@ const HomeScreen = () => {
             setIsConfirmingPayment(true);
             const response = await driverApiService.confirmPayment(id);
             if (response.data.success) {
-                Alert.alert('Success', 'Payment confirmed.');
+                useAlertStore.getState().showSuccess('Success', 'Payment confirmed.');
                 setActiveRide(null);
             }
         } catch (error: any) {
             console.error('🔴 Confirm Payment ERROR:', error.response?.data || error.message);
-            Alert.alert('Error', 'Failed to confirm payment');
+            useAlertStore.getState().showError('Error', 'Failed to confirm payment');
         } finally {
             setIsConfirmingPayment(false);
         }
@@ -409,7 +409,7 @@ const HomeScreen = () => {
                 setShowCancelModal(false);
             }
         } catch (error: any) {
-            Alert.alert('Error', 'Failed to cancel ride');
+            useAlertStore.getState().showError('Error', 'Failed to cancel ride');
         } finally {
             setIsCanceling(false);
         }
@@ -417,11 +417,11 @@ const HomeScreen = () => {
     const handleCallCustomer = () => {
         const phone = activeRide?.customerPhone || activeRide?.customer?.phone || activeRide?.customer?.phoneNumber || activeRide?.phoneNumber;
         if (!phone) {
-            Alert.alert('Error', 'Customer phone number is not available.');
+            useAlertStore.getState().showError('Error', 'Customer phone number is not available.');
             return;
         }
         Linking.openURL(`tel:${phone}`).catch(() => {
-            Alert.alert('Error', 'Could not open the phone dialer.');
+            useAlertStore.getState().showError('Error', 'Could not open the phone dialer.');
         });
     };
 

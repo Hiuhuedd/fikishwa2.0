@@ -15,6 +15,7 @@ import { GOOGLE_MAPS_API_KEY } from '../../config/googleMaps';
 import { decodePolyline } from '../../utils/polyline';
 import { socketService } from '../../services/socketService';
 import { locationService } from '../../services/locationService';
+import { useAlertStore } from '../../store/alertStore';
 const carMarkerImg = require('../../assets/images/car_marker.png');
 
 interface VehicleCategory {
@@ -36,6 +37,11 @@ const DEFAULT_CATEGORIES: VehicleCategory[] = [
     { id: 'fikaa', name: 'Fikaa', description: 'Everyday affordable rides', baseFare: 100, perKmRate: 30, perMinRate: 3, perStopFee: 50, iconEmoji: '🛵', capacity: 1, eta: 3 },
     { id: 'premium', name: 'Premium', description: 'Luxury comfort', baseFare: 300, perKmRate: 55, perMinRate: 8, perStopFee: 150, iconEmoji: '🚙', capacity: 4, eta: 6 },
 ];
+
+const formatCurrency = (val: any) => {
+    if (val === undefined || val === null) return '0';
+    return Number(val).toLocaleString('en-US');
+};
 
 const RideOptionsScreen = () => {
     const navigation = useNavigation<any>();
@@ -142,11 +148,11 @@ const RideOptionsScreen = () => {
                 }, 500);
             } else {
                 console.error('[RideOptions] Server success but estimates missing or invalid:', res.data);
-                Alert.alert('Error', 'Server returned invalid estimate data.');
+                useAlertStore.getState().showError('Error', 'Server returned invalid estimate data.');
             }
         } catch (error) {
             console.error('[RideOptions] Fetch data error:', error);
-            Alert.alert('Error', 'Failed to get ride estimates. Please try again.');
+            useAlertStore.getState().showError('Error', 'Failed to get ride estimates. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -191,7 +197,7 @@ const RideOptionsScreen = () => {
     const handleRequestRide = async () => {
         const est = getSelectedEstimate();
         if (!est) {
-            Alert.alert('Error', 'Please select a ride category.');
+            useAlertStore.getState().showError('Error', 'Please select a ride category.');
             return;
         }
 
@@ -221,10 +227,10 @@ const RideOptionsScreen = () => {
                     durationMin,
                 });
             } else {
-                Alert.alert('Error', response.data.message || 'Could not request ride.');
+                useAlertStore.getState().showError('Error', response.data.message || 'Could not request ride.');
             }
         } catch (err: any) {
-            Alert.alert('Error', err.response?.data?.message || 'Failed to request ride.');
+            useAlertStore.getState().showError('Error', err.response?.data?.message || 'Failed to request ride.');
         } finally {
             setRequesting(false);
         }
@@ -375,7 +381,7 @@ const RideOptionsScreen = () => {
                                         >
                                             <Info size={16} color={colors.primary} />
                                         </TouchableOpacity>
-                                        <Text style={[styles.ridePrice, { color: colors.textPrimary }]}>KES {fareStr}</Text>
+                                        <Text style={[styles.ridePrice, { color: colors.textPrimary }]}>KES {formatCurrency(fareStr)}</Text>
                                     </View>
                                 </TouchableOpacity>
                             );
@@ -401,17 +407,7 @@ const RideOptionsScreen = () => {
                         >
                             <User size={16} color={colors.textSecondary} />
                             <Briefcase size={16} color={colors.textSecondary} />
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Payment Row */}
-                    <View style={styles.paymentRow}>
-                        <Text style={[styles.paymentMethodLabel, { color: colors.textPrimary }]}>Personal</Text>
-                        <TouchableOpacity style={styles.paymentSelector} onPress={() => setPaymentMethod(paymentMethod === 'cash' ? 'mpesa' : 'cash')}>
-                            <Text style={[styles.paymentMethodValue, { color: colors.textSecondary }]}>
-                                {paymentMethod === 'cash' ? 'Cash' : 'M-Pesa'}
-                            </Text>
-                            <ChevronRight size={16} color={colors.textSecondary} />
+                            <Text style={[styles.couponText, { color: colors.textSecondary, marginLeft: 4 }]}>Details</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -434,13 +430,14 @@ const RideOptionsScreen = () => {
                             style={styles.scheduleBtn}
                             onPress={() => {
                                 if (!selected) {
-                                    Alert.alert('Selection Required', 'Please select a ride type first.');
+                                    useAlertStore.getState().showAlert('Selection Required', 'Please select a ride type first.');
                                     return;
                                 }
                                 setShowFareBreakdown(true);
                             }}
                         >
                             <Receipt size={22} color={colors.textPrimary} />
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textPrimary, marginLeft: 4 }}>Fare</Text>
                         </TouchableOpacity>
                     </View>
                 </ScrollView>
@@ -477,7 +474,7 @@ const RideOptionsScreen = () => {
                                         </View>
                                     </View>
                                     <Text style={[styles.fbTotalLarge, { color: colors.textPrimary }]}>
-                                        KES {estimates.find(e => e.categoryId === selected)?.estimatedFare || selectedCat.estimatedFare}
+                                        KES {formatCurrency(estimates.find(e => e.categoryId === selected)?.estimatedFare || selectedCat.estimatedFare)}
                                     </Text>
                                 </View>
 
@@ -493,36 +490,36 @@ const RideOptionsScreen = () => {
                                         return (
                                             <>
                                                 {bkd.minFare !== undefined && (
-                                                    <View style={styles.fbRow}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>Minimum Fare</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {bkd.minFare}</Text></View>
+                                                    <View style={styles.fbRow}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>Minimum Fare</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {formatCurrency(bkd.minFare)}</Text></View>
                                                 )}
                                                 {bkd.baseFare !== undefined && (
-                                                    <View style={styles.fbRow}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>Base Fare</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {bkd.baseFare}</Text></View>
+                                                    <View style={styles.fbRow}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>Base Fare</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {formatCurrency(bkd.baseFare)}</Text></View>
                                                 )}
                                                 {bkd.distanceFee !== undefined && (
-                                                    <View style={styles.fbRow}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>Distance Fare</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {bkd.distanceFee}</Text></View>
+                                                    <View style={styles.fbRow}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>Distance Fare</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {formatCurrency(bkd.distanceFee)}</Text></View>
                                                 )}
                                                 {bkd.timeFee !== undefined && (
-                                                    <View style={styles.fbRow}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>Time Fare</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {bkd.timeFee}</Text></View>
+                                                    <View style={styles.fbRow}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>Time Fare</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {formatCurrency(bkd.timeFee)}</Text></View>
                                                 )}
 
                                                 <View style={[styles.separator, { backgroundColor: colors.border }]} />
-                                                <View style={styles.fbRow}><Text style={[styles.fbLabelBold, { color: colors.textPrimary }]}>Trip Fare</Text><Text style={[styles.fbValBold, { color: colors.textPrimary }]}>KES {bkd.subtotal !== undefined ? bkd.subtotal : (estInfo?.estimatedFare || selectedCat.estimatedFare)}</Text></View>
+                                                <View style={styles.fbRow}><Text style={[styles.fbLabelBold, { color: colors.textPrimary }]}>Trip Fare</Text><Text style={[styles.fbValBold, { color: colors.textPrimary }]}>KES {formatCurrency(bkd.subtotal !== undefined ? bkd.subtotal : (estInfo?.estimatedFare || selectedCat.estimatedFare))}</Text></View>
 
                                                 {bkd.tax !== undefined && (
-                                                    <View style={styles.fbRow}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>+ Tax</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {bkd.tax}</Text></View>
+                                                    <View style={styles.fbRow}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>+ Tax</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {formatCurrency(bkd.tax)}</Text></View>
                                                 )}
                                                 {bkd.vat !== undefined && (
-                                                    <View style={[styles.fbRow, { paddingLeft: 20 }]}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>• VAT</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {bkd.vat}</Text></View>
+                                                    <View style={[styles.fbRow, { paddingLeft: 20 }]}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>• VAT</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {formatCurrency(bkd.vat)}</Text></View>
                                                 )}
                                                 {bkd.discount !== undefined && (
-                                                    <View style={styles.fbRow}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>- Promotional Discount</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {Number(bkd.discount).toFixed(2)}</Text></View>
+                                                    <View style={styles.fbRow}><Text style={[styles.fbLabel, { color: colors.textSecondary }]}>- Promotional Discount</Text><Text style={[styles.fbVal, { color: colors.textSecondary }]}>KES {formatCurrency(bkd.discount)}</Text></View>
                                                 )}
 
                                                 <View style={[styles.separator, { backgroundColor: colors.border }]} />
                                                 <View style={styles.fbRow}>
                                                     <Text style={[styles.fbLabelBold, { color: colors.textPrimary }]}>Total Fare</Text>
                                                     <Text style={[styles.fbValBold, { color: colors.textPrimary }]}>
-                                                        KES {estInfo?.estimatedFare || selectedCat.estimatedFare}
+                                                        KES {formatCurrency(estInfo?.estimatedFare || selectedCat.estimatedFare)}
                                                     </Text>
                                                 </View>
                                             </>
@@ -531,7 +528,7 @@ const RideOptionsScreen = () => {
                                 </ScrollView>
 
                                 <TouchableOpacity
-                                    style={[styles.primarySubmitBtn, { backgroundColor: colors.primary, marginTop: 16 }]}
+                                    style={[styles.modalSubmitBtn, { backgroundColor: colors.primary, marginTop: 16, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' }]}
                                     onPress={() => setShowFareBreakdown(false)}
                                 >
                                     <Text style={[styles.primarySubmitText, { color: colors.textOnPrimary }]}>Done</Text>
@@ -591,7 +588,7 @@ const RideOptionsScreen = () => {
                         </View>
 
                         <TouchableOpacity
-                            style={[styles.primarySubmitBtn, { backgroundColor: colors.primary }]}
+                            style={[styles.modalSubmitBtn, { backgroundColor: colors.primary, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' }]}
                             onPress={() => setShowRequiredDetails(false)}
                         >
                             <Text style={[styles.primarySubmitText, { color: colors.textOnPrimary }]}>Continue</Text>
@@ -698,12 +695,14 @@ const styles = StyleSheet.create({
 
     actionRow: { flexDirection: 'row', gap: 12 },
     primarySubmitBtn: { flex: 1, borderRadius: 999, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
+    modalSubmitBtn: { width: '100%', borderRadius: 999, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
     primarySubmitText: { fontSize: 18, fontWeight: '700', letterSpacing: 0.5 },
-    scheduleBtn: { width: 56, height: 56, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
+    scheduleBtn: { paddingHorizontal: 12, height: 56, flexDirection: 'row', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
 
     // Modal Shared
     modalOverlay: { flex: 1, justifyContent: 'flex-end' },
     modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingTop: 16 },
+
     modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', alignSelf: 'center', marginBottom: 20 },
 
     // Fare Breakdown Modal

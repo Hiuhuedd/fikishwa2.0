@@ -10,6 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import { useAlertStore } from '../../store/alertStore';
 
 type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList, 'IdentityDocuments'>;
 
@@ -29,7 +30,7 @@ const IdentityDocumentScreen = () => {
     const pickDocument = async (field: keyof typeof docs) => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('Permission needed', 'We need access to your gallery to upload documents');
+            useAlertStore.getState().showAlert('Permission needed', 'We need access to your gallery to upload documents');
             return;
         }
 
@@ -69,7 +70,7 @@ const IdentityDocumentScreen = () => {
             }
         } catch (error) {
             console.error('Upload Error:', error);
-            Alert.alert('Upload Failed', 'There was an issue uploading your document');
+            useAlertStore.getState().showAlert('Upload Failed', 'There was an issue uploading your document');
         } finally {
             setUploading(null);
         }
@@ -77,7 +78,7 @@ const IdentityDocumentScreen = () => {
 
     const handleNext = async () => {
         if (!docs.idFrontUrl || !docs.idBackUrl || !docs.licenseUrl) {
-            Alert.alert('Missing Documents', 'ID and Driving License are required to proceed');
+            useAlertStore.getState().showAlert('Missing Documents', 'ID and Driving License are required to proceed');
             return;
         }
         setLoading(true);

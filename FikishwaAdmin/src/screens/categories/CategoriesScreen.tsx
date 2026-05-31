@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAlertStore } from '../../store/alertStore';
 import {
     View,
     Text,
@@ -78,7 +79,7 @@ const CategoriesScreen: React.FC = () => {
 
             await toggleCategory(id, !currentStatus);
         } catch (error) {
-            Alert.alert('Error', 'Failed to update status');
+            useAlertStore.getState().showError('Error', 'Failed to update status');
             fetchCategories(); // Revert on failure
         }
     };
@@ -112,7 +113,7 @@ const CategoriesScreen: React.FC = () => {
 
     const handleSave = async () => {
         if (!name || !baseFare || !perKm || !minFare) {
-            Alert.alert('Validation Error', 'Please fill all required fields');
+            useAlertStore.getState().showError('Validation Error', 'Please fill all required fields');
             return;
         }
 
@@ -143,14 +144,14 @@ const CategoriesScreen: React.FC = () => {
             }
 
             if (response.success) {
-                Alert.alert('Success', `Category ${editingId ? 'updated' : 'created'} successfully`);
+                useAlertStore.getState().showSuccess('Success', `Category ${editingId ? 'updated' : 'created'} successfully`);
                 setModalVisible(false);
                 fetchCategories();
             } else {
-                Alert.alert('Error', response.message);
+                useAlertStore.getState().showError('Error', response.message);
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to save category');
+            useAlertStore.getState().showError('Error', error.message || 'Failed to save category');
         } finally {
             setSaving(false);
         }

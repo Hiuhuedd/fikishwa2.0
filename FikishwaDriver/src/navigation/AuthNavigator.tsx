@@ -6,16 +6,23 @@ import OtpVerificationScreen from '../screens/Auth/OtpVerificationScreen';
 export type AuthStackParamList = {
     PhoneInput: undefined;
     OtpVerification: undefined;
+    PrivacyPolicy: undefined;
+    TermsAgreement: undefined;
     // Registration: undefined; // To be added
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
+
+import PrivacyPolicyScreen from '../screens/Auth/PrivacyPolicyScreen';
+import TermsAgreementScreen from '../screens/Auth/TermsAgreementScreen';
 
 export const AuthNavigator = () => {
     return (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="PhoneInput" component={PhoneInputScreen} />
             <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+            <Stack.Screen name="TermsAgreement" component={TermsAgreementScreen} />
         </Stack.Navigator>
     );
 };

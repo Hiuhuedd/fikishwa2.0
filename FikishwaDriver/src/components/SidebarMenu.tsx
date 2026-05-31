@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAlertStore } from '../store/alertStore';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform, Alert, ScrollView } from 'react-native';
 import {
     User, MapPin, Clock, CreditCard, Gift,
@@ -64,7 +65,7 @@ const SidebarMenu = ({
                     <MenuItem icon={Clock} title="My Rides" onPress={onHistoryPress} color="#8B5CF6" bgColor="#F5F3FF" />
                     <MenuItem icon={CreditCard} title="Earnings" onPress={onEarningsPress} color="#10B981" bgColor="#ECFDF5" />
                     <MenuItem icon={Gift} title="Referrals" onPress={onReferralPress} color="#F59E0B" bgColor="#FFFBEB" />
-                    <MenuItem icon={ShieldCheck} title="Safety Toolkit" onPress={() => Alert.alert('Safety', 'Safety features coming soon')} color="#EF4444" bgColor="#FEF2F2" />
+                    <MenuItem icon={ShieldCheck} title="Safety Toolkit" onPress={() => useAlertStore.getState().showAlert('Safety', 'Safety features coming soon')} color="#EF4444" bgColor="#FEF2F2" />
 
                     <View style={styles.divider} />
 

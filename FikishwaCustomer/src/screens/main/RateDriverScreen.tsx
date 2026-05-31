@@ -9,6 +9,7 @@ import api from '../../services/api';
 import customerApiService from '../../services/customerApiService';
 import { API_ENDPOINTS } from '../../config/api';
 import { Star } from 'lucide-react-native';
+import { useAlertStore } from '../../store/alertStore';
 
 
 
@@ -28,7 +29,7 @@ const RateDriverScreen = () => {
             await customerApiService.rateDriver({ rideId, stars: rating, comment });
             navigation.replace('Home');
         } catch {
-            Alert.alert('Error', 'Failed to submit rating.');
+            useAlertStore.getState().showError('Error', 'Failed to submit rating.');
         } finally {
             setLoading(false);
         }

@@ -19,9 +19,14 @@ export type MainStackParamList = {
     RideDetail: { ride: any };
     Help: undefined;
     DisabledAccount: { owedAmount: number; maxLimit: number };
+    PrivacyPolicy: undefined;
+    TermsAgreement: undefined;
 };
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
+
+import PrivacyPolicyScreen from '../screens/Auth/PrivacyPolicyScreen';
+import TermsAgreementScreen from '../screens/Auth/TermsAgreementScreen';
 
 export const MainNavigator = () => {
     return (
@@ -34,6 +39,8 @@ export const MainNavigator = () => {
             <Stack.Screen name="Account" component={AccountScreen} />
             <Stack.Screen name="Help" component={HelpScreen} />
             <Stack.Screen name="DisabledAccount" component={DisabledAccountScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+            <Stack.Screen name="TermsAgreement" component={TermsAgreementScreen} />
         </Stack.Navigator>
     );
 };

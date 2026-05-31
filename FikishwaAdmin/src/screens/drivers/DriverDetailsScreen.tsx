@@ -25,6 +25,7 @@ import {
     Driver
 } from '../../services/driverService';
 import { getAllCategories, VehicleCategory } from '../../services/categoryService';
+import { useAlertStore } from '../../store/alertStore';
 
 const DriverDetailsScreen: React.FC = () => {
     const navigation = useNavigation();
@@ -50,12 +51,12 @@ const DriverDetailsScreen: React.FC = () => {
             if (response.success) {
                 setDriver(response.driver);
             } else {
-                Alert.alert('Error', 'Failed to load driver details');
+                useAlertStore.getState().showError('Error', 'Failed to load driver details');
                 navigation.goBack();
             }
         } catch (error) {
             console.error('Error fetching driver details:', error);
-            Alert.alert('Error', 'Failed to load driver details');
+            useAlertStore.getState().showError('Error', 'Failed to load driver details');
         } finally {
             setLoading(false);
         }
@@ -78,10 +79,8 @@ const DriverDetailsScreen: React.FC = () => {
     }, [driverId]);
 
     const handleApprove = async () => {
-        Alert.alert(
-            'Approve Driver',
-            'Are you sure you want to approve this driver? They will be able to start accepting rides.',
-            [
+        useAlertStore.getState().showAlert(
+            'Approve Driver', 'Are you sure you want to approve this driver? They will be able to start accepting rides.', 'info', [
                 { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Approve',
@@ -91,25 +90,24 @@ const DriverDetailsScreen: React.FC = () => {
                             setActionLoading(true);
                             const response = await approveDriver(driverId);
                             if (response.success) {
-                                Alert.alert('Success', 'Driver approved successfully');
+                                useAlertStore.getState().showSuccess('Success', 'Driver approved successfully');
                                 fetchDetails(); // Refresh details
                             } else {
-                                Alert.alert('Error', response.message || 'Failed to approve driver');
+                                useAlertStore.getState().showError('Error', response.message || 'Failed to approve driver');
                             }
                         } catch (error: any) {
-                            Alert.alert('Error', error.message || 'Failed to approve driver');
+                            useAlertStore.getState().showError('Error', error.message || 'Failed to approve driver');
                         } finally {
                             setActionLoading(false);
                         }
                     },
                 },
-            ]
-        );
+            ]);
     };
 
     const handleReject = async () => {
         if (!rejectReason.trim()) {
-            Alert.alert('Required', 'Please enter a reason for rejection');
+            useAlertStore.getState().showAlert('Required', 'Please enter a reason for rejection');
             return;
         }
 
@@ -118,13 +116,13 @@ const DriverDetailsScreen: React.FC = () => {
             const response = await rejectDriver(driverId, rejectReason);
             if (response.success) {
                 setRejectModalVisible(false);
-                Alert.alert('Success', 'Driver rejected successfully');
+                useAlertStore.getState().showSuccess('Success', 'Driver rejected successfully');
                 fetchDetails();
             } else {
-                Alert.alert('Error', response.message || 'Failed to reject driver');
+                useAlertStore.getState().showError('Error', response.message || 'Failed to reject driver');
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to reject driver');
+            useAlertStore.getState().showError('Error', error.message || 'Failed to reject driver');
         } finally {
             setActionLoading(false);
         }
@@ -140,13 +138,13 @@ const DriverDetailsScreen: React.FC = () => {
             const response = await updateDriverCategory(driverId, selectedCategory);
             if (response.success) {
                 setCategoryModalVisible(false);
-                Alert.alert('Success', 'Driver category updated successfully');
+                useAlertStore.getState().showSuccess('Success', 'Driver category updated successfully');
                 fetchDetails();
             } else {
-                Alert.alert('Error', response.message || 'Failed to update category');
+                useAlertStore.getState().showError('Error', response.message || 'Failed to update category');
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to update category');
+            useAlertStore.getState().showError('Error', error.message || 'Failed to update category');
         } finally {
             setActionLoading(false);
         }
@@ -154,7 +152,7 @@ const DriverDetailsScreen: React.FC = () => {
 
     const handleUpdatePhone = async () => {
         if (!editingPhone.trim()) {
-            Alert.alert('Required', 'Please enter a valid phone number');
+            useAlertStore.getState().showAlert('Required', 'Please enter a valid phone number');
             return;
         }
 
@@ -163,13 +161,13 @@ const DriverDetailsScreen: React.FC = () => {
             const response = await updateDriverPhone(driverId, editingPhone);
             if (response.success) {
                 setPhoneModalVisible(false);
-                Alert.alert('Success', 'Driver phone number updated successfully');
+                useAlertStore.getState().showSuccess('Success', 'Driver phone number updated successfully');
                 fetchDetails();
             } else {
-                Alert.alert('Error', response.message || 'Failed to update phone number');
+                useAlertStore.getState().showError('Error', response.message || 'Failed to update phone number');
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to update phone number');
+            useAlertStore.getState().showError('Error', error.message || 'Failed to update phone number');
         } finally {
             setActionLoading(false);
         }
@@ -202,13 +200,13 @@ const DriverDetailsScreen: React.FC = () => {
                 // Update local state for immediate feedback
                 setVerifiedDocs(prev => ({ ...prev, [selectedDocLabel]: action === 'verify' }));
                 setImageModalVisible(false);
-                Alert.alert('Success', `${selectedDocLabel} marked as ${status}.`);
+                useAlertStore.getState().showSuccess('Success', `${selectedDocLabel} marked as ${status}.`);
                 fetchDetails(); // Refresh full driver object to get new docStatuses
             } else {
-                Alert.alert('Error', response.message || `Failed to mark ${selectedDocLabel}`);
+                useAlertStore.getState().showError('Error', response.message || `Failed to mark ${selectedDocLabel}`);
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || `Failed to update document status`);
+            useAlertStore.getState().showError('Error', error.message || `Failed to update document status`);
         } finally {
             setActionLoading(false);
         }
@@ -225,10 +223,8 @@ const DriverDetailsScreen: React.FC = () => {
         const isCurrentlyEnabled = driver.isEnabled !== false; // Default to true if undefined? Or check status
         const newStatus = !isCurrentlyEnabled;
 
-        Alert.alert(
-            newStatus ? 'Enable Driver' : 'Disable Driver',
-            `Are you sure you want to ${newStatus ? 'enable' : 'disable'} this driver?`,
-            [
+        useAlertStore.getState().showAlert(
+            newStatus ? 'Enable Driver' : 'Disable Driver', `Are you sure you want to ${newStatus ? 'enable' : 'disable'} this driver?`, 'info', [
                 { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Confirm',
@@ -238,20 +234,19 @@ const DriverDetailsScreen: React.FC = () => {
                             setActionLoading(true);
                             const response = await toggleDriverStatus(driver.driverId || driver.uid || driver.id || '', newStatus);
                             if (response.success) {
-                                Alert.alert('Success', `Driver ${newStatus ? 'enabled' : 'disabled'} successfully`);
+                                useAlertStore.getState().showSuccess('Success', `Driver ${newStatus ? 'enabled' : 'disabled'} successfully`);
                                 fetchDetails();
                             } else {
-                                Alert.alert('Error', response.message || 'Failed to update status');
+                                useAlertStore.getState().showError('Error', response.message || 'Failed to update status');
                             }
                         } catch (error: any) {
-                            Alert.alert('Error', error.message || 'Failed to update status');
+                            useAlertStore.getState().showError('Error', error.message || 'Failed to update status');
                         } finally {
                             setActionLoading(false);
                         }
                     },
                 },
-            ]
-        );
+            ]);
     };
 
     if (loading) {

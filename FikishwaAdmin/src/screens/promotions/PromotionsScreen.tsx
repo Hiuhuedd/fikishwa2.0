@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAlertStore } from '../../store/alertStore';
 import {
     View,
     Text,
@@ -69,10 +70,8 @@ const PromotionsScreen: React.FC = () => {
     };
 
     const handleDelete = (promoCode: string) => {
-        Alert.alert(
-            'Delete Promotion',
-            `Are you sure you want to delete ${promoCode}?`,
-            [
+        useAlertStore.getState().showAlert(
+            'Delete Promotion', `Are you sure you want to delete ${promoCode}?`, 'info', [
                 { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Delete',
@@ -81,23 +80,22 @@ const PromotionsScreen: React.FC = () => {
                         try {
                             const response = await deletePromotion(promoCode);
                             if (response.success) {
-                                Alert.alert('Success', 'Promotion deleted');
+                                useAlertStore.getState().showSuccess('Success', 'Promotion deleted');
                                 fetchPromotions();
                             } else {
-                                Alert.alert('Error', response.message);
+                                useAlertStore.getState().showError('Error', response.message);
                             }
                         } catch (error: any) {
-                            Alert.alert('Error', error.message || 'Failed to delete');
+                            useAlertStore.getState().showError('Error', error.message || 'Failed to delete');
                         }
                     },
                 },
-            ]
-        );
+            ]);
     };
 
     const handleCreate = async () => {
         if (!code || !value) {
-            Alert.alert('Required', 'Please enter a code and value');
+            useAlertStore.getState().showAlert('Required', 'Please enter a code and value');
             return;
         }
 
@@ -122,13 +120,13 @@ const PromotionsScreen: React.FC = () => {
             if (response.success) {
                 setModalVisible(false);
                 cleanupForm();
-                Alert.alert('Success', 'Promotion created!');
+                useAlertStore.getState().showSuccess('Success', 'Promotion created!');
                 fetchPromotions();
             } else {
-                Alert.alert('Error', response.message);
+                useAlertStore.getState().showError('Error', response.message);
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to create promotion');
+            useAlertStore.getState().showError('Error', error.message || 'Failed to create promotion');
         } finally {
             setCreating(false);
         }

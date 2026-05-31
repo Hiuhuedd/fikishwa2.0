@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store/authStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChevronLeft, Check } from 'lucide-react-native';
 import customerApiService from '../../services/customerApiService';
+import { useAlertStore } from '../../store/alertStore';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -31,15 +32,15 @@ const RegisterScreen = () => {
     const handleRegister = async () => {
         const isCompleteMode = mode === 'complete';
         if (!firstName || !lastName || !email || !phone) {
-            Alert.alert('Missing Info', 'Please fill in all required fields.');
+            useAlertStore.getState().showAlert('Missing Info', 'Please fill in all required fields.');
             return;
         }
         if (!emailRegex.test(email)) {
-            Alert.alert('Invalid Email', 'Please enter a valid email address.');
+            useAlertStore.getState().showAlert('Invalid Email', 'Please enter a valid email address.');
             return;
         }
         if (!agreed) {
-            Alert.alert('Agreement Required', 'Please agree to the Terms & Conditions.');
+            useAlertStore.getState().showAlert('Agreement Required', 'Please agree to the Terms & Conditions.');
             return;
         }
 
@@ -95,7 +96,7 @@ const RegisterScreen = () => {
                 registrationData: payload
             });
         } catch (err: any) {
-            Alert.alert('Error', err.response?.data?.message || 'Action failed.');
+            useAlertStore.getState().showError('Error', err.response?.data?.message || 'Action failed.');
         } finally {
             setLoading(false);
         }

@@ -17,7 +17,7 @@ class EmailService {
         this.transporter = nodemailer.createTransport({
             host,
             port,
-            secure: port === 465, // false for 587 (STARTTLS)
+            secure: port === 465, // true for 465 (SSL), false for 587 (STARTTLS)
             family: 4, // Force IPv4 to avoid ENETUNREACH issues
             auth: {
                 user: process.env.SMTP_USER,
@@ -26,9 +26,18 @@ class EmailService {
             tls: {
                 rejectUnauthorized: false
             },
-            connectionTimeout: 10000,
-            greetingTimeout: 10000,
-            socketTimeout: 20000
+            connectionTimeout: 15000,
+            greetingTimeout: 15000,
+            socketTimeout: 30000
+        });
+
+        // Test connection on startup
+        this.transporter.verify((error, success) => {
+            if (error) {
+                console.log("❌ SMTP Connection Error:", error);
+            } else {
+                console.log("✅ SMTP Server is ready to send emails");
+            }
         });
 
         console.log('📧 Email Service Initialized (SMTP)');

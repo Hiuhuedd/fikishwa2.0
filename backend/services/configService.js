@@ -18,6 +18,7 @@ const DEFAULT_CONFIG = {
     supportEmail: "edwardhiuhu0@gmail.com",
     supportPhone: "+254743466032",
     surgeMultiplier: 1.0,
+    maxDispatchRadius: null,
     updatedAt: null,
     updatedBy: null
 };
@@ -101,6 +102,12 @@ const updateConfig = async (updates, adminId) => {
         if (updates.maxOwedCommission !== undefined) {
             if (updates.maxOwedCommission <= 0) {
                 throw new Error('Max owed commission must be greater than 0');
+            }
+        }
+
+        if (updates.maxDispatchRadius !== undefined && updates.maxDispatchRadius !== null) {
+            if (updates.maxDispatchRadius < 0) {
+                throw new Error('Max dispatch radius must be a positive number or null');
             }
         }
 
