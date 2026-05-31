@@ -4,6 +4,7 @@ const testController = require('../controllers/testController');
 const { getAvailableDrivers } = require('../services/socketService');
 
 router.post('/mock-ride', testController.triggerMockRide);
+router.get('/mock-ride', testController.triggerMockRide);
 
 // Debug endpoint: returns all available drivers currently tracked
 router.get('/drivers', (req, res) => {
