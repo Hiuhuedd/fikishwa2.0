@@ -139,11 +139,24 @@ const RideDetailScreen = () => {
                         <View style={styles.avatar}>
                             <User size={24} color="#001C3D" />
                         </View>
-                        <View>
+                        <View style={{ flex: 1 }}>
                             <Text style={styles.customerName}>{ride.customerName || 'Customer'}</Text>
                             <Text style={styles.customerSub}>Client Information</Text>
                         </View>
                     </View>
+                    {ride.customerRating && (
+                        <View style={styles.ratingContainer}>
+                            <View style={styles.starsRow}>
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <Text key={star} style={{ fontSize: 18, color: star <= ride.customerRating.stars ? '#F59E0B' : '#E2E8F0' }}>★</Text>
+                                ))}
+                                <Text style={styles.ratingScore}>{ride.customerRating.stars}.0 Rating</Text>
+                            </View>
+                            {ride.customerRating.comment ? (
+                                <Text style={styles.ratingComment}>"{ride.customerRating.comment}"</Text>
+                            ) : null}
+                        </View>
+                    )}
                 </View>
 
                 {ride.parcelDetails && (
@@ -200,7 +213,11 @@ const styles = StyleSheet.create({
     customerName: { fontSize: 18, fontWeight: '700', color: '#1E293B' },
     customerSub: { fontSize: 14, color: '#94A3B8', fontWeight: '500' },
     distanceBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
-    distanceText: { fontSize: 14, color: '#64748B', fontWeight: '600' }
+    distanceText: { fontSize: 14, color: '#64748B', fontWeight: '600' },
+    ratingContainer: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+    starsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+    ratingScore: { marginLeft: 8, fontSize: 14, fontWeight: '700', color: '#1E293B' },
+    ratingComment: { fontSize: 14, color: '#475569', fontStyle: 'italic', lineHeight: 20 }
 });
 
 export default RideDetailScreen;

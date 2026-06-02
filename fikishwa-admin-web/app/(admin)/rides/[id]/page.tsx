@@ -264,6 +264,37 @@ export default function RideDetailsPage() {
               )}
             </div>
           </div>
+
+          {/* Ratings & Feedback */}
+          {(ride.customerRating || ride.driverRating) && (
+            <div className="bg-white rounded-2xl border border-border shadow-sm p-6 mt-6">
+              <h2 className="text-sm font-bold text-textPrimary uppercase tracking-wider mb-4">Ratings & Feedback</h2>
+              <div className="space-y-4">
+                {ride.customerRating && (
+                  <div className="p-4 bg-slate-50 rounded-xl border border-border">
+                    <p className="text-xs font-semibold text-textMuted uppercase mb-2">From Customer</p>
+                    <div className="flex items-center gap-1 mb-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span key={star} className={`text-lg ${star <= ride.customerRating!.stars ? 'text-yellow-400' : 'text-slate-200'}`}>★</span>
+                      ))}
+                    </div>
+                    {ride.customerRating.comment && <p className="text-sm text-textPrimary italic">"{ride.customerRating.comment}"</p>}
+                  </div>
+                )}
+                {ride.driverRating && (
+                  <div className="p-4 bg-slate-50 rounded-xl border border-border">
+                    <p className="text-xs font-semibold text-textMuted uppercase mb-2">From Driver</p>
+                    <div className="flex items-center gap-1 mb-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span key={star} className={`text-lg ${star <= ride.driverRating!.stars ? 'text-yellow-400' : 'text-slate-200'}`}>★</span>
+                      ))}
+                    </div>
+                    {ride.driverRating.comment && <p className="text-sm text-textPrimary italic">"{ride.driverRating.comment}"</p>}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Col: Map */}

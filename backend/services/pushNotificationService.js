@@ -22,6 +22,8 @@ const sendPushNotification = async (pushToken, title, body, data = {}) => {
         title: title,
         body: body,
         data: data,
+        priority: 'high',
+        channelId: 'default',
     }];
 
     try {

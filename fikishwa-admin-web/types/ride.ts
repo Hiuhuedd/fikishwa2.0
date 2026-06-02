@@ -13,6 +13,8 @@ export interface Ride {
   durationMin?: number;
   paymentMethod?: 'cash' | 'mpesa';
   vehicleCategory?: string;
+  customerRating?: { stars: number; comment: string; ratedAt: string };
+  driverRating?: { stars: number; comment: string; ratedAt: string };
   createdAt: string | { seconds: number };
 }
 
