@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const adminNewsController = require('../controllers/adminNewsController');
-const { verifyAdmin } = require('../middleware/authMiddleware');
+const verifyToken = require('../middleware/authMiddleware');
+const { checkRole } = require('../middleware/roleMiddleware');
 
-router.use(verifyAdmin);
+router.use(verifyToken);
+router.use(checkRole('admin'));
 
 router.post('/', adminNewsController.createNews);
 router.get('/', adminNewsController.getNews);
