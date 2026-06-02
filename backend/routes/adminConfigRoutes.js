@@ -11,5 +11,6 @@ router.use(checkRole('admin'));
 
 router.get('/', adminConfigController.getConfig);
 router.post('/update', adminConfigController.updateConfig);
+router.put('/', adminConfigController.updateConfig);
 
 module.exports = router;
