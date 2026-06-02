@@ -19,6 +19,7 @@ const DEFAULT_CONFIG = {
     supportPhone: "+254743466032",
     surgeMultiplier: 1.0,
     maxDispatchRadius: null,
+    geohashPrecision: 5,
     updatedAt: null,
     updatedBy: null
 };
@@ -108,6 +109,12 @@ const updateConfig = async (updates, adminId) => {
         if (updates.maxDispatchRadius !== undefined && updates.maxDispatchRadius !== null) {
             if (updates.maxDispatchRadius < 0) {
                 throw new Error('Max dispatch radius must be a positive number or null');
+            }
+        }
+
+        if (updates.geohashPrecision !== undefined && updates.geohashPrecision !== null) {
+            if (updates.geohashPrecision < 4 || updates.geohashPrecision > 8) {
+                throw new Error('Geohash precision must be between 4 and 8');
             }
         }
 

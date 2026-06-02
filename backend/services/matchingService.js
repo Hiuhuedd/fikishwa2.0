@@ -30,8 +30,9 @@ const findNearbyDrivers = async (pickup, radiusKm = 10, requestedCategory = null
     try {
         const config = await configService.getConfig();
         const maxDispatchRadius = config.maxDispatchRadius || null;
+        const geohashPrecision = config.geohashPrecision || 5;
 
-        const pickupGeohash = ngeohash.encode(pickup.lat, pickup.lng, 5);
+        const pickupGeohash = ngeohash.encode(pickup.lat, pickup.lng, geohashPrecision);
         const driversRef = collection(db, 'activeDrivers');
         const queryPromises = [];
 
@@ -124,8 +125,9 @@ const findNearbyRequests = async (location, category = 'standard') => {
     try {
         const config = await configService.getConfig();
         const maxDispatchRadius = config.maxDispatchRadius || null;
+        const geohashPrecision = config.geohashPrecision || 5;
         
-        const geohash = ngeohash.encode(location.lat, location.lng, 5);
+        const geohash = ngeohash.encode(location.lat, location.lng, geohashPrecision);
         const requestRef = collection(db, 'rideRequests');
         const queryPromises = [];
 

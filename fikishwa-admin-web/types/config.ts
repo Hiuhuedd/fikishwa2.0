@@ -6,6 +6,7 @@ export interface AppConfig {
   supportPhone: string;
   supportEmail: string;
   maxDispatchRadius: number | null;
+  geohashPrecision?: number;
   surgeMultiplier: number;
   updatedAt?: string;
 }

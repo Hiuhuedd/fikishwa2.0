@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Car, Users, MapPin, CreditCard, Tag, Gift, Settings, X } from 'lucide-react';
+import { LayoutDashboard, Car, Users, MapPin, CreditCard, Tag, Gift, Settings, X, Newspaper } from 'lucide-react';
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -11,6 +11,7 @@ const navItems = [
   { label: 'Payouts', href: '/payouts', icon: CreditCard },
   { label: 'Categories', href: '/categories', icon: Tag },
   { label: 'Promotions', href: '/promotions', icon: Gift },
+  { label: 'News', href: '/news', icon: Newspaper },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
 

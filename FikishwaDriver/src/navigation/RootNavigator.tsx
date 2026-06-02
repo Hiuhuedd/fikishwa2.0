@@ -7,7 +7,17 @@ import { useAuthStore } from '../store/useAuthStore';
 import { View, ActivityIndicator } from 'react-native';
 import { registerForPushNotificationsAsync } from '../services/pushNotifications';
 import api from '../services/api';
-import * as Notifications from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+
+let Notifications: any = null;
+const isExpoGo = Constants.appOwnership === 'expo' || Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+try {
+    if (!isExpoGo) {
+        Notifications = require('expo-notifications');
+    }
+} catch (e) {
+    console.warn('Could not load expo-notifications in RootNavigator');
+}
 
 export const RootNavigator = () => {
     const { user, isLoading, initialize } = useAuthStore();
@@ -29,17 +39,26 @@ export const RootNavigator = () => {
                 }
             });
 
-            const subscription = Notifications.addNotificationReceivedListener(notification => {
-                console.log('Push notification received:', notification);
-            });
+            let subscription: any = null;
+            let responseSubscription: any = null;
 
-            const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
-                console.log('Push notification interacted:', response);
-            });
+            if (Notifications && !isExpoGo) {
+                try {
+                    subscription = Notifications.addNotificationReceivedListener((notification: any) => {
+                        console.log('Push notification received:', notification);
+                    });
+
+                    responseSubscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
+                        console.log('Push notification interacted:', response);
+                    });
+                } catch (err) {
+                    console.warn('Failed to attach notification listeners:', err);
+                }
+            }
 
             return () => {
-                subscription.remove();
-                responseSubscription.remove();
+                if (subscription) subscription.remove();
+                if (responseSubscription) responseSubscription.remove();
             };
         }
     }, [user, isApproved]);

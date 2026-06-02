@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://fikishwa2-0-backend.onrender.com/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://fikishwa2-0-backend.onrender.com/api',
   timeout: 15000,
 });
 

@@ -80,7 +80,9 @@ const requestRide = async (customerData) => {
         const rideId = rideRef.id;
 
         // 4. Create temporary ride request for matching
-        const pickupGeohash = ngeohash.encode(pickup.lat, pickup.lng, 6);
+        const config = await configService.getConfig();
+        const geohashPrecision = config.geohashPrecision || 6;
+        const pickupGeohash = ngeohash.encode(pickup.lat, pickup.lng, geohashPrecision);
         const rideRequestData = {
             rideId,
             pickup,
@@ -583,11 +585,28 @@ const getAllRides = async (limitNum = 20, lastDocId = null) => {
     }
 };
 
+/**
+ * Get Ride by ID (Admin)
+ */
+const getRideById = async (rideId) => {
+    try {
+        const rideDoc = await getDoc(doc(db, 'rides', rideId));
+        if (!rideDoc.exists()) {
+            return null;
+        }
+        return { rideId: rideDoc.id, ...rideDoc.data() };
+    } catch (error) {
+        console.error('Get Ride By ID Error:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     requestRide,
     acceptRide,
     updateRideStatus,
     completeRide,
     getRideStatistics,
-    getAllRides
+    getAllRides,
+    getRideById
 };

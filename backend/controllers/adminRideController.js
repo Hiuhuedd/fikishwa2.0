@@ -24,3 +24,21 @@ exports.getAllRides = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+/**
+ * Get ride by ID
+ */
+exports.getRideById = async (req, res) => {
+    try {
+        const { rideId } = req.params;
+        const ride = await rideService.getRideById(rideId);
+        
+        if (!ride) {
+            return res.status(404).json({ success: false, message: 'Ride not found' });
+        }
+        
+        res.json({ success: true, ride });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};

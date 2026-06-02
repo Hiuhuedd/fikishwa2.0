@@ -34,6 +34,7 @@ const SettingsScreen: React.FC = () => {
     const [supportPhone, setSupportPhone] = useState('');
     const [supportEmail, setSupportEmail] = useState('');
     const [maxDispatchRadius, setMaxDispatchRadius] = useState('');
+    const [geohashPrecision, setGeohashPrecision] = useState('');
 
     // Edit Mode
     const [isEditing, setIsEditing] = useState(false);
@@ -61,6 +62,7 @@ const SettingsScreen: React.FC = () => {
         setSupportPhone(data.supportPhone || '');
         setSupportEmail(data.supportEmail || '');
         setMaxDispatchRadius(data.maxDispatchRadius ? data.maxDispatchRadius.toString() : '');
+        setGeohashPrecision(data.geohashPrecision ? data.geohashPrecision.toString() : '5');
     };
 
     useEffect(() => {
@@ -94,6 +96,7 @@ const SettingsScreen: React.FC = () => {
                 supportPhone,
                 supportEmail,
                 maxDispatchRadius: maxDispatchRadius ? parseFloat(maxDispatchRadius) : null,
+                geohashPrecision: geohashPrecision ? parseInt(geohashPrecision, 10) : 5,
             };
 
             const response = await updateConfig(updates);
@@ -207,6 +210,24 @@ const SettingsScreen: React.FC = () => {
                                 />
                             ) : (
                                 <Text style={styles.value}>{config?.maxDispatchRadius ? `${config.maxDispatchRadius} km` : 'No Limit'}</Text>
+                            )}
+                        </View>
+
+                        <View style={styles.divider} />
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Geohash Precision</Text>
+                            <Text style={styles.helperText}>Used for geospatial queries (4-8). Lower = wider search area.</Text>
+                            {isEditing ? (
+                                <TextInput
+                                    style={styles.input}
+                                    value={geohashPrecision}
+                                    onChangeText={setGeohashPrecision}
+                                    keyboardType="numeric"
+                                    placeholder="e.g. 5"
+                                />
+                            ) : (
+                                <Text style={styles.value}>{config?.geohashPrecision || 5}</Text>
                             )}
                         </View>
 

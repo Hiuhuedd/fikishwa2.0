@@ -16,7 +16,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ commissionRate: '', maxOwedCommission: '', maxDispatchRadius: '', paybillNumber: '', supportPhone: '', supportEmail: '' });
+  const [form, setForm] = useState({ commissionRate: '', maxOwedCommission: '', maxDispatchRadius: '', geohashPrecision: '', paybillNumber: '', supportPhone: '', supportEmail: '' });
 
   const fetchConfig = async () => {
     setLoading(true);
@@ -28,6 +28,7 @@ export default function SettingsPage() {
         commissionRate: String((cfg.commissionRate * 100).toFixed(0)),
         maxOwedCommission: String(cfg.maxOwedCommission),
         maxDispatchRadius: cfg.maxDispatchRadius ? String(cfg.maxDispatchRadius) : '',
+        geohashPrecision: cfg.geohashPrecision ? String(cfg.geohashPrecision) : '5',
         paybillNumber: cfg.paybillNumber || '',
         supportPhone: cfg.supportPhone || '',
         supportEmail: cfg.supportEmail || '',
@@ -47,6 +48,7 @@ export default function SettingsPage() {
         commissionRate: rate / 100,
         maxOwedCommission: parseFloat(form.maxOwedCommission),
         maxDispatchRadius: form.maxDispatchRadius ? parseFloat(form.maxDispatchRadius) : null,
+        geohashPrecision: form.geohashPrecision ? parseInt(form.geohashPrecision, 10) : 5,
         paybillNumber: form.paybillNumber,
         supportPhone: form.supportPhone,
         supportEmail: form.supportEmail,
@@ -66,6 +68,7 @@ export default function SettingsPage() {
     { key: 'commissionRate', label: 'Commission Rate (%)', hint: '0–20', type: 'number', display: config ? `${(config.commissionRate * 100).toFixed(0)}%` : '—' },
     { key: 'maxOwedCommission', label: 'Max Owed Commission (KES)', hint: 'Drivers blocked above this amount', type: 'number', display: `KES ${config?.maxOwedCommission?.toLocaleString()}` },
     { key: 'maxDispatchRadius', label: 'Max Dispatch Radius (km)', hint: 'Leave empty for no limit', type: 'number', display: config?.maxDispatchRadius ? `${config.maxDispatchRadius} km` : 'No Limit' },
+    { key: 'geohashPrecision', label: 'Geohash Precision', hint: 'Used for geospatial queries (4-8). Lower = wider search area.', type: 'number', display: config?.geohashPrecision ? `${config.geohashPrecision}` : '5' },
     { key: 'paybillNumber', label: 'Paybill Number', type: 'text', display: config?.paybillNumber || 'Not set' },
     { key: 'supportPhone', label: 'Support Phone', type: 'tel', display: config?.supportPhone || 'Not set' },
     { key: 'supportEmail', label: 'Support Email', type: 'email', display: config?.supportEmail || 'Not set' },

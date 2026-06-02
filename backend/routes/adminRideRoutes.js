@@ -13,5 +13,6 @@ router.get('/stats', (req, res, next) => {
     next();
 }, adminRideController.getRideStats);
 router.get('/', adminRideController.getAllRides); // GET /api/admin/rides?limit=20&lastDocId=...
+router.get('/:rideId', adminRideController.getRideById);
 
 module.exports = router;

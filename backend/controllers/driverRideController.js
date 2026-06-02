@@ -46,7 +46,10 @@ exports.goOnline = async (req, res) => {
         let category = (data.vehicleType || (data.approvedCategories && data.approvedCategories.length > 0 ? data.approvedCategories[0] : 'fikaa')).toString().trim();
         console.log(`🔍 [GoOnline] Using category: ${category}`);
 
-        const geohash = ngeohash.encode(location.lat, location.lng, 6);
+        const configService = require('../services/configService');
+        const config = await configService.getConfig();
+        const geohashPrecision = config.geohashPrecision || 6;
+        const geohash = ngeohash.encode(location.lat, location.lng, geohashPrecision);
         console.log(`🔍 [GoOnline] Writing to activeDrivers...`);
         await setDoc(doc(db, 'activeDrivers', driverId), {
             driverId,

@@ -80,7 +80,9 @@ app.use('/api/admin/vehicle-categories', require('./routes/adminVehicleCategoryR
 app.use('/api/driver/payout', require('./routes/driverPayoutRoutes'));
 app.use('/api/admin/customers', require('./routes/adminCustomerRoutes'));
 app.use('/api/admin/promotions', require('./routes/adminPromotionRoutes'));
+app.use('/api/admin/news', require('./routes/adminNewsRoutes'));
 app.use('/api/referral', require('./routes/referralRoutes'));
+app.use('/api/news', require('./routes/newsRoutes'));
 app.use('/api/customer/promo', require('./routes/customerPromoRoutes'));
 app.get('/health', (req, res) => {
     res.status(200).json({ success: true, status: 'OK', timestamp: new Date().toISOString() });

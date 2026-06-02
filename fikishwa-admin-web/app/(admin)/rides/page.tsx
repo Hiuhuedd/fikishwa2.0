@@ -6,6 +6,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import Badge from '@/components/ui/Badge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState, { ErrorState } from '@/components/ui/EmptyState';
+import Link from 'next/link';
 import type { Ride } from '@/types/ride';
 
 type BadgeVariant = 'success' | 'error' | 'warning' | 'info' | 'default';
@@ -65,7 +66,7 @@ export default function RidesPage() {
                 const cfg = statusConfig[ride.status] || { variant: 'default' as BadgeVariant, label: ride.status.replace(/_/g, ' ').toUpperCase() };
                 const fare = ride.finalFare || ride.estimatedFare || 0;
                 return (
-                  <div key={ride.rideId} className="bg-white rounded-xl border border-border shadow-sm p-4">
+                  <Link href={`/rides/${ride.rideId}`} key={ride.rideId} className="block bg-white rounded-xl border border-border shadow-sm p-4 hover:shadow-md hover:border-primary/30 transition-all cursor-pointer">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs text-textMuted">{formatDate(ride.createdAt)}</span>
                       <div className="flex items-center gap-3">
@@ -88,7 +89,7 @@ export default function RidesPage() {
                       <span>🚗 {ride.driverDetails?.name || 'No driver'}</span>
                       <span>👤 {ride.customerName || 'Customer'}</span>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
               <div ref={loaderRef} className="py-4 flex justify-center">

@@ -14,6 +14,7 @@ export interface AppConfig {
     privacyUrl?: string;
     currency?: string; // Default: KES
     maxDispatchRadius?: number | null;
+    geohashPrecision?: number;
     [key: string]: any; // Allow other config keys
 }
 
