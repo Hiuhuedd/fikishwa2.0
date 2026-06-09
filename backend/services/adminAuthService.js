@@ -23,12 +23,20 @@ class AdminAuthService {
         this.jwtExpiresIn = process.env.JWT_EXPIRES_IN || '30d';
     }
 
-    async sendOtp(phone, ipAddress) {
-        const normalizedPhone = smsService.normalizePhone(phone);
-
-        // Security check: Only send OTP if phone exists in 'admins' collection
+    async sendOtp(identifier, ipAddress) {
+        const isEmail = identifier.includes('@');
+        let q;
+        let normalizedIdentifier;
         const adminsRef = collection(this.db, 'admins');
-        const q = query(adminsRef, where("phone", "==", normalizedPhone));
+
+        if (isEmail) {
+            normalizedIdentifier = identifier.toLowerCase().trim();
+            q = query(adminsRef, where("email", "==", normalizedIdentifier));
+        } else {
+            normalizedIdentifier = smsService.normalizePhone(identifier);
+            q = query(adminsRef, where("phone", "==", normalizedIdentifier));
+        }
+
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
@@ -40,18 +48,24 @@ class AdminAuthService {
         const expiresAt = Timestamp.fromDate(new Date(Date.now() + 5 * 60 * 1000));
 
         const docRef = await addDoc(collection(this.db, 'otpSessions'), {
-            phone: normalizedPhone,
+            identifier: normalizedIdentifier,
             hashedOtp: hashedOtp,
             attempts: 0,
             expiresAt: expiresAt,
             createdAt: Timestamp.now(),
-            ip: ipAddress || 'unknown'
+            ip: ipAddress || 'unknown',
+            type: isEmail ? 'email' : 'phone'
         });
 
         const sessionId = docRef.id;
-        const message = `Your Fikishwa Admin access code is ${otp}. Valid for 5 minutes.`;
 
-        await smsService.sendSMS(normalizedPhone, message, "system", "auth_otp_admin");
+        if (isEmail) {
+            const emailService = require('./emailService');
+            await emailService.sendOtpEmail(normalizedIdentifier, otp);
+        } else {
+            const message = `Your Fikishwa Admin access code is ${otp}. Valid for 5 minutes.`;
+            await smsService.sendSMS(normalizedIdentifier, message, "system", "auth_otp_admin");
+        }
 
         return sessionId;
     }
@@ -84,11 +98,17 @@ class AdminAuthService {
         // OTP Valid
         await deleteDoc(sessionRef);
 
-        const phone = sessionData.phone;
+        const identifier = sessionData.identifier || sessionData.phone;
+        const isEmail = sessionData.type === 'email' || (identifier && identifier.includes('@'));
 
         // Final check for admin profile
         const adminsRef = collection(this.db, 'admins');
-        const q = query(adminsRef, where("phone", "==", phone));
+        let q;
+        if (isEmail) {
+            q = query(adminsRef, where("email", "==", identifier));
+        } else {
+            q = query(adminsRef, where("phone", "==", identifier));
+        }
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
@@ -104,7 +124,7 @@ class AdminAuthService {
 
         // Generate JWT with role: 'admin'
         const token = jwt.sign(
-            { uid: uid, phone: phone, role: 'admin' },
+            { uid: uid, identifier: identifier, role: 'admin' },
             this.jwtSecret,
             { expiresIn: this.jwtExpiresIn }
         );

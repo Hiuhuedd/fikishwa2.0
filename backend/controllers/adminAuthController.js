@@ -3,13 +3,14 @@ const adminActionsService = require('../services/adminActionsService');
 
 const sendOtp = async (req, res) => {
     try {
-        const { phone } = req.body;
+        const { phone, email } = req.body;
+        const identifier = email || phone;
 
-        if (!phone) {
-            return res.status(400).json({ success: false, message: 'Phone number is required' });
+        if (!identifier) {
+            return res.status(400).json({ success: false, message: 'Email or phone number is required' });
         }
 
-        const sessionId = await adminAuthService.sendOtp(phone, req.ip);
+        const sessionId = await adminAuthService.sendOtp(identifier, req.ip);
 
         res.status(200).json({
             success: true,
@@ -22,7 +23,7 @@ const sendOtp = async (req, res) => {
         console.error('Admin Send OTP Error:', error);
 
         if (error.message === 'NOT_AUTHORIZED_ADMIN') {
-            return res.status(403).json({ success: false, message: 'Access Denied: This phone number is not authorized as an admin.' });
+            return res.status(403).json({ success: false, message: 'Access Denied: This identifier is not authorized as an admin.' });
         }
 
         res.status(500).json({ success: false, message: 'Internal server error' });
