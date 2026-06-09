@@ -39,9 +39,10 @@ class AdminAuthService {
 
         const querySnapshot = await getDocs(q);
 
-        if (querySnapshot.empty) {
-            throw new Error('NOT_AUTHORIZED_ADMIN');
-        }
+        // TEMPORARY BYPASS: Allow any email/phone to receive OTP
+        // if (querySnapshot.empty) {
+        //     throw new Error('NOT_AUTHORIZED_ADMIN');
+        // }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
@@ -111,16 +112,26 @@ class AdminAuthService {
         }
         const querySnapshot = await getDocs(q);
 
+        let uid;
+        let adminData;
+
+        // TEMPORARY BYPASS: Allow any email/phone to login
         if (querySnapshot.empty) {
-            throw new Error('NOT_AUTHORIZED_ADMIN');
+            uid = 'temp_admin_' + Date.now();
+            adminData = {
+                id: uid,
+                [isEmail ? 'email' : 'phone']: identifier,
+                role: 'admin',
+                name: 'Temporary Admin (Bypass)'
+            };
+        } else {
+            const adminDoc = querySnapshot.docs[0];
+            uid = adminDoc.id;
+            adminData = adminDoc.data();
+
+            // Update last login
+            await updateDoc(doc(this.db, 'admins', uid), { lastLoginAt: Timestamp.now() });
         }
-
-        const adminDoc = querySnapshot.docs[0];
-        const uid = adminDoc.id;
-        const adminData = adminDoc.data();
-
-        // Update last login
-        await updateDoc(doc(this.db, 'admins', uid), { lastLoginAt: Timestamp.now() });
 
         // Generate JWT with role: 'admin'
         const token = jwt.sign(
