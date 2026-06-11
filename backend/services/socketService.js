@@ -82,6 +82,7 @@ const initSocket = (server) => {
                     location: loc
                 }));
                 io.to('customer').emit('available-drivers', drivers);
+                io.emit('driver:location_update', { driverId: userId, lat, lng, heading, speed });
 
                 // console.log(`Location update from driver ${userId}: ${lat}, ${lng}`);
             }
