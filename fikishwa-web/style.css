@@ -1,11 +1,11 @@
 :root {
-  /* Color Palette - Premium Light Theme with Green and Gold */
-  --bg-primary: #ffffff;
+  /* Color Palette - Premium Light Theme with Gold and Green */
+  --bg-primary: #F59E0B;
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
   
-  --accent-primary: #10B981; /* Emerald Green */
-  --accent-secondary: #F59E0B; /* Gold */
+  --accent-primary: #F59E0B; /* Gold */
+  --accent-secondary: #059669; /* Green */
   --accent-gradient: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
   
   --text-primary: #0f172a; /* Slate 900 */
@@ -23,7 +23,7 @@
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --shadow-glow: 0 0 25px rgba(16, 185, 129, 0.15);
+  --shadow-glow: 0 0 25px rgba(245, 158, 11, 0.15);
   
   --transition-fast: 0.2s ease;
   --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
