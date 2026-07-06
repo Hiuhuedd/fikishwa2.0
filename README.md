@@ -4,10 +4,11 @@ Fikishwa is a multi-app platform for ride-hailing and delivery services.
 
 ## Project Structure
 
-- **FikishwaCustomer**: React Native application for customers.
-- **FikishwaDriver**: React Native application for drivers.
-- **FikishwaAdmin**: React Native application for administrators.
-- **backend**: Express.js backend services.
+- **backend/**: Node.js/Express API with Socket.IO for real-time driver tracking and M-Pesa payments.
+- **FikishwaCustomer/**: React Native (Expo) customer app (JavaScript).
+- **FikishwaDriver/**: React Native (Expo) driver app (JavaScript).
+- **fikishwa-admin-web/**: Admin Web Dashboard built with Next.js (TypeScript) and Tailwind CSS.
+- **fikishwa-web/**: Landing website using plain HTML + CSS + JavaScript (NO React, NO build step). Theme colors defined in `style.css` `:root`.
 
 ## Development & Testing
 
